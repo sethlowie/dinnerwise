@@ -16,6 +16,8 @@ import (
 	"github.com/sethlowie/dinnerwise/internal/meal"
 	"github.com/sethlowie/dinnerwise/internal/observability"
 	"github.com/sethlowie/dinnerwise/internal/recipe"
+	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 // Service implements agentv1connect.AgentServiceHandler. When agent is non-nil
@@ -25,20 +27,28 @@ type Service struct {
 	meals   *meal.Repo
 	delay   time.Duration
 	agent   *llmAgent
+	tracer  trace.Tracer
 }
 
 // NewService returns a handler backed by the real OpenAI agent when cfg has a
 // key, and the scripted fallback (with a lifelike 60 ms delay) otherwise.
 func NewService(cfg config.Config, providers *observability.Providers, recipes *recipe.Repo, meals *meal.Repo) agentv1connect.AgentServiceHandler {
+	var tracer trace.Tracer
+	if providers != nil {
+		tracer = providers.Tracer
+	}
+	if tracer == nil {
+		tracer = noop.NewTracerProvider().Tracer("agent")
+	}
 	if cfg.HasOpenAI() {
 		var sclient *sigil.Client
 		if providers != nil {
 			sclient = providers.Sigil
 		}
 		client := newOpenAIClient(cfg.OpenAIAPIKey, cfg.OpenAIModel, sclient)
-		return &Service{recipes: recipes, meals: meals, agent: newLLMAgent(client, recipes, meals)}
+		return &Service{recipes: recipes, meals: meals, tracer: tracer, agent: newLLMAgent(client, recipes, meals, tracer)}
 	}
-	return &Service{recipes: recipes, meals: meals, delay: 60 * time.Millisecond}
+	return &Service{recipes: recipes, meals: meals, tracer: tracer, delay: 60 * time.Millisecond}
 }
 
 // NewServiceWithDelay returns a handler with an explicit delay (use 0 in tests).
@@ -52,6 +62,8 @@ func (s *Service) Ask(
 	stream *connect.ServerStream[agentv1.AskEvent],
 ) error {
 	if s.agent != nil {
+		ctx, span := s.tracer.Start(ctx, "agent.ask")
+		defer span.End()
 		emit := func(ev *agentv1.AskEvent) error { return stream.Send(ev) }
 		err := s.agent.Run(ctx, req.Msg.GetText(), emit)
 		if err != nil {
