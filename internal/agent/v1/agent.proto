@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package internal.agent.v1;
+
+message AskRequest {
+  string text = 1;
+}
+
+message TextDelta { string text = 1; }
+message Thinking { string text = 1; }
+message ToolCall {
+  string name = 1;
+  string detail = 2;
+}
+message Navigate {
+  string to = 1;
+  map<string, string> search = 2;
+}
+message Done {}
+
+message AskEvent {
+  oneof event {
+    TextDelta text = 1;
+    Thinking thinking = 2;
+    ToolCall tool_call = 3;
+    Navigate navigate = 4;
+    Done done = 5;
+  }
+}
+
+service AgentService {
+  rpc Ask(AskRequest) returns (stream AskEvent);
+}
