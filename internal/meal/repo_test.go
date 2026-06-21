@@ -139,3 +139,50 @@ func TestGetByIDNotFound(t *testing.T) {
 		t.Fatalf("err = %v, want ErrNotFound", err)
 	}
 }
+
+func TestSeedIfEmptyGeneratesCookLog(t *testing.T) {
+	database := newTestDB(t)
+
+	if err := SeedIfEmpty(database); err != nil {
+		t.Fatalf("first seed: %v", err)
+	}
+	repo := NewRepo(database)
+
+	all, err := repo.List(context.Background(), "recent", false)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(all) != 11 {
+		t.Fatalf("meals = %d, want 11", len(all))
+	}
+
+	// salmon: timesCooked 7, last 2026-06-18, no recipe link
+	m, cooks, err := repo.GetByID(context.Background(), "salmon")
+	if err != nil {
+		t.Fatalf("get salmon: %v", err)
+	}
+	if m.TimesCooked != 7 || m.LastCooked != "2026-06-18" {
+		t.Fatalf("salmon derived stats wrong: %+v", m)
+	}
+	if len(cooks) != 5 { // LIMIT 5 of the 7 logged
+		t.Fatalf("salmon recent cooks = %d, want 5", len(cooks))
+	}
+
+	// pasta links to a real recipe
+	pasta, _, err := repo.GetByID(context.Background(), "pasta")
+	if err != nil {
+		t.Fatalf("get pasta: %v", err)
+	}
+	if pasta.RecipeID != "tomato-pasta" {
+		t.Fatalf("pasta recipe_id = %q, want tomato-pasta", pasta.RecipeID)
+	}
+
+	// idempotent
+	if err := SeedIfEmpty(database); err != nil {
+		t.Fatalf("second seed: %v", err)
+	}
+	again, _ := repo.List(context.Background(), "recent", false)
+	if len(again) != 11 {
+		t.Fatalf("meals after second seed = %d, want 11", len(again))
+	}
+}

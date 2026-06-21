@@ -1,0 +1,13 @@
+[
+  { "id": "salmon", "name": "Miso-Glazed Salmon", "cuisine": "Japanese", "rating": 5, "timesCooked": 7, "last": "2026-06-18", "recipeId": "" },
+  { "id": "pasta", "name": "Sun-Dried Tomato Pasta", "cuisine": "Italian", "rating": 5, "timesCooked": 5, "last": "2026-06-15", "recipeId": "tomato-pasta" },
+  { "id": "curry", "name": "Thai Green Curry", "cuisine": "Thai", "rating": 5, "timesCooked": 4, "last": "2026-06-09", "recipeId": "" },
+  { "id": "beef", "name": "Korean Beef Bowl", "cuisine": "Korean", "rating": 4, "timesCooked": 6, "last": "2026-06-12", "recipeId": "" },
+  { "id": "chicken", "name": "Lemon Herb Roast Chicken", "cuisine": "American", "rating": 4, "timesCooked": 3, "last": "2026-06-06", "recipeId": "sheet-pan-chicken" },
+  { "id": "shakshuka", "name": "Shakshuka", "cuisine": "Middle Eastern", "rating": 4, "timesCooked": 8, "last": "2026-06-03", "recipeId": "" },
+  { "id": "tacos", "name": "Black Bean Tacos", "cuisine": "Mexican", "rating": 4, "timesCooked": 5, "last": "2026-05-30", "recipeId": "" },
+  { "id": "pizza", "name": "Margherita Pizza", "cuisine": "Italian", "rating": 3, "timesCooked": 2, "last": "2026-05-28", "recipeId": "" },
+  { "id": "caesar", "name": "Caesar Salad", "cuisine": "American", "rating": 3, "timesCooked": 4, "last": "2026-05-25", "recipeId": "" },
+  { "id": "stirfry", "name": "Veggie Stir-Fry", "cuisine": "Chinese", "rating": 3, "timesCooked": 3, "last": "2026-05-20", "recipeId": "veggie-stir-fry" },
+  { "id": "oats", "name": "Overnight Oats", "cuisine": "Breakfast", "rating": 2, "timesCooked": 9, "last": "2026-05-19", "recipeId": "" }
+]
