@@ -18,6 +18,13 @@ export function Sidebar() {
           Home
         </Link>
         <Link
+          to="/meals"
+          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted [&.active]:bg-accent [&.active]:text-foreground"
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-current opacity-60" />
+          Meals
+        </Link>
+        <Link
           to="/recipes"
           className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted [&.active]:bg-accent [&.active]:text-foreground"
         >
