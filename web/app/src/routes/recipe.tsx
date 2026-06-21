@@ -18,10 +18,6 @@ function RecipeDetail() {
   if (!recipe) return <p className="text-muted-foreground">Not found.</p>;
 
   const tint = tintFor(recipe.id);
-  const methodLines = recipe.instructions
-    .split(/\n+/)
-    .map((l) => l.trim())
-    .filter(Boolean);
 
   return (
     <article className="space-y-7">
@@ -41,9 +37,16 @@ function RecipeDetail() {
         </div>
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">{recipe.name}</h1>
-          <p className="mt-2 font-mono text-sm text-muted-foreground">
-            ⏱ {recipe.totalMinutes} min · serves {recipe.servings}
-          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="font-mono text-sm text-muted-foreground">
+              ⏱ {recipe.totalMinutes} min · {recipe.cuisine} · {recipe.difficulty}
+            </span>
+            {recipe.inPantry && (
+              <span className="rounded-md border border-emerald-500/35 bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[10px] text-emerald-400">
+                in pantry
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -68,11 +71,16 @@ function RecipeDetail() {
         <div className="mb-3 font-mono text-xs uppercase tracking-[0.1em] text-muted-foreground">
           Method
         </div>
-        <div className="flex flex-col gap-3 text-sm leading-relaxed text-foreground/85">
-          {methodLines.map((line, i) => (
-            <p key={i}>{line}</p>
+        <ol className="flex flex-col gap-3">
+          {recipe.steps.map((step, i) => (
+            <li key={i} className="flex gap-3">
+              <span className="flex h-6 w-6 flex-none items-center justify-center rounded-lg border border-primary/40 bg-primary/10 font-mono text-xs text-primary">
+                {i + 1}
+              </span>
+              <span className="text-sm leading-relaxed text-foreground/85">{step}</span>
+            </li>
           ))}
-        </div>
+        </ol>
       </section>
     </article>
   );

@@ -57,10 +57,17 @@ function Recipes() {
               >
                 {initials(r.name)}
               </div>
-              <div className="min-w-0">
-                <div className="truncate font-medium">{r.name}</div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="truncate font-medium">{r.name}</span>
+                  {r.inPantry && (
+                    <span className="flex-none rounded-md border border-emerald-500/35 bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[10px] text-emerald-400">
+                      in pantry
+                    </span>
+                  )}
+                </div>
                 <div className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
-                  ⏱ {r.totalMinutes} min · serves {r.servings}
+                  ⏱ {r.totalMinutes} min · {r.cuisine}
                 </div>
               </div>
             </Link>
