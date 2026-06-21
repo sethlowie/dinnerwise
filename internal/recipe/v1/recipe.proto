@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package internal.recipe.v1;
+
+message Recipe {
+  string id = 1;
+  string name = 2;
+  string instructions = 3;
+  int32 servings = 4;
+  int32 total_minutes = 5;
+  repeated RecipeIngredient ingredients = 6;
+}
+
+message RecipeIngredient {
+  string ingredient_id = 1;
+  string name = 2;
+  double quantity = 3;
+  string unit = 4;
+}
+
+message ListRecipesRequest {}
+
+message ListRecipesResponse {
+  repeated Recipe recipes = 1;
+}
+
+message GetRecipeRequest {
+  string id = 1;
+}
+
+message GetRecipeResponse {
+  Recipe recipe = 1;
+}
+
+service RecipeService {
+  rpc ListRecipes(ListRecipesRequest) returns (ListRecipesResponse);
+  rpc GetRecipe(GetRecipeRequest) returns (GetRecipeResponse);
+}
