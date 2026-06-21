@@ -1,0 +1,11 @@
+services:
+  lgtm:
+    image: grafana/otel-lgtm:latest
+    container_name: dinnerwise-lgtm
+    ports:
+      - "3000:3000"   # Grafana
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    volumes:
+      - ./dashboard.json:/otel-lgtm/grafana/conf/provisioning/dashboards/custom/dinnerwise.json:ro
+      - ./provisioning.yaml:/otel-lgtm/grafana/conf/provisioning/dashboards/custom.yaml:ro
