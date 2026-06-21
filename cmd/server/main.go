@@ -7,9 +7,8 @@ import (
 	"os"
 
 	"github.com/sethlowie/dinnerwise/internal/db"
-	"github.com/sethlowie/dinnerwise/internal/foo"
-	"github.com/sethlowie/dinnerwise/internal/foo/v1/foov1connect"
 	"github.com/sethlowie/dinnerwise/internal/recipe"
+	"github.com/sethlowie/dinnerwise/internal/recipe/v1/recipev1connect"
 )
 
 func main() {
@@ -34,14 +33,16 @@ func main() {
 	if err := recipe.SeedIfEmpty(database); err != nil {
 		log.Fatalf("server: seed: %v", err)
 	}
-	recipes, err := recipe.NewRepo(database).List(context.Background())
+
+	repo := recipe.NewRepo(database)
+	recipes, err := repo.List(context.Background())
 	if err != nil {
 		log.Fatalf("server: list recipes: %v", err)
 	}
 	log.Printf("server: %d recipes loaded from %s", len(recipes), dbPath)
 
 	mux := http.NewServeMux()
-	mux.Handle(foov1connect.NewFooServiceHandler(foo.NewService()))
+	mux.Handle(recipev1connect.NewRecipeServiceHandler(recipe.NewService(repo)))
 
 	log.Printf("server: listening on %s", addr)
 	if err := http.ListenAndServe(addr, withCORS(mux)); err != nil {
