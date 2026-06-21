@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package internal.meal.v1;
+
+message Meal {
+  string id = 1;
+  string name = 2;
+  string cuisine = 3;
+  int32 rating = 4;
+  int32 times_cooked = 5;
+  string last_cooked = 6;
+  string recipe_id = 7;
+}
+
+message Cook {
+  string cooked_on = 1;
+  string note = 2;
+}
+
+message ListMealsRequest {
+  string sort = 1;
+  bool favorites_only = 2;
+}
+message ListMealsResponse { repeated Meal meals = 1; }
+
+message GetMealRequest { string id = 1; }
+message GetMealResponse {
+  Meal meal = 1;
+  repeated Cook recent_cooks = 2;
+}
+
+service MealService {
+  rpc ListMeals(ListMealsRequest) returns (ListMealsResponse);
+  rpc GetMeal(GetMealRequest) returns (GetMealResponse);
+}
