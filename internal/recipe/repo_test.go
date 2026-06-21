@@ -103,6 +103,9 @@ func TestListAssemblesIngredients(t *testing.T) {
 	if len(got[0].Ingredients) != 2 {
 		t.Fatalf("a-soup ingredients = %d, want 2", len(got[0].Ingredients))
 	}
+	if len(got[1].Ingredients) != 1 {
+		t.Fatalf("b-toast ingredients = %d, want 1", len(got[1].Ingredients))
+	}
 }
 
 func TestGetByID(t *testing.T) {

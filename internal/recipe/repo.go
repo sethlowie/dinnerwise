@@ -65,6 +65,9 @@ func (r *Repo) List(ctx context.Context) ([]Recipe, error) {
 		); err != nil {
 			return nil, fmt.Errorf("scan ingredient line: %w", err)
 		}
+		// recipeID is always present: foreign_keys(ON) guarantees the join row
+		// references a real recipe, and List fetches every recipe. The guard is
+		// defensive against an inconsistent DB.
 		if idx, ok := indexByID[recipeID]; ok {
 			recipes[idx].Ingredients = append(recipes[idx].Ingredients, li)
 		}
