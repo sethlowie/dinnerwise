@@ -6,8 +6,14 @@ import { initials, thumbStyle, tintFor } from "../lib/thumb";
 
 const routeApi = getRouteApi("/recipes");
 
+type RecipeSearch = {
+  ingredient?: string;
+  pantry?: boolean;
+  maxMinutes?: number;
+};
+
 function Recipes() {
-  const { ingredient } = routeApi.useSearch();
+  const { ingredient, pantry, maxMinutes } = routeApi.useSearch();
   const navigate = routeApi.useNavigate();
   const { data, error, isPending } = useQuery(listRecipes, {});
 
@@ -16,11 +22,16 @@ function Recipes() {
     return <p className="text-red-600 dark:text-red-400">{error.message}</p>;
 
   const term = ingredient?.toLowerCase().trim() ?? "";
-  const recipes = term
-    ? data.recipes.filter((r) =>
-        r.ingredients.some((i) => i.name.toLowerCase().includes(term)),
-      )
-    : data.recipes;
+  const recipes = data.recipes.filter((r) => {
+    if (term && !r.ingredients.some((i) => i.name.toLowerCase().includes(term)))
+      return false;
+    if (pantry && !r.inPantry) return false;
+    if (maxMinutes !== undefined && r.totalMinutes > maxMinutes) return false;
+    return true;
+  });
+
+  const clear = (key: keyof RecipeSearch) =>
+    navigate({ search: (p: RecipeSearch) => ({ ...p, [key]: undefined }) });
 
   return (
     <div className="space-y-6">
@@ -28,14 +39,30 @@ function Recipes() {
         <div className="mb-2 font-mono text-xs uppercase tracking-[0.12em] text-muted-foreground">
           Your kitchen
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-3xl font-semibold tracking-tight">Recipes</h1>
           {ingredient && (
             <button
-              onClick={() => navigate({ search: {} })}
+              onClick={() => clear("ingredient")}
               className="rounded-full border border-primary/40 bg-accent px-3 py-1 text-xs text-accent-foreground"
             >
               ingredient: {ingredient} ✕
+            </button>
+          )}
+          {pantry && (
+            <button
+              onClick={() => clear("pantry")}
+              className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-400"
+            >
+              in pantry ✕
+            </button>
+          )}
+          {maxMinutes !== undefined && (
+            <button
+              onClick={() => clear("maxMinutes")}
+              className="rounded-full border border-primary/40 bg-accent px-3 py-1 text-xs text-accent-foreground"
+            >
+              ≤ {maxMinutes} min ✕
             </button>
           )}
         </div>
@@ -81,8 +108,21 @@ function Recipes() {
 export const recipesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/recipes",
-  validateSearch: (search: Record<string, unknown>): { ingredient?: string } => ({
-    ingredient: typeof search.ingredient === "string" ? search.ingredient : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): RecipeSearch => {
+    const max =
+      typeof search.maxMinutes === "number"
+        ? search.maxMinutes
+        : typeof search.maxMinutes === "string" && search.maxMinutes !== "" && !Number.isNaN(Number(search.maxMinutes))
+          ? Number(search.maxMinutes)
+          : undefined;
+    return {
+      ingredient: typeof search.ingredient === "string" ? search.ingredient : undefined,
+      pantry:
+        search.pantry === true || search.pantry === "true" || search.pantry === "1"
+          ? true
+          : undefined,
+      maxMinutes: max,
+    };
+  },
   component: Recipes,
 });
