@@ -1,0 +1,40 @@
+[
+  {
+    "id": "sheet-pan-chicken",
+    "name": "Sheet-Pan Chicken & Veg",
+    "instructions": "Toss everything with oil and roast at 220C for 30 minutes.",
+    "servings": 4,
+    "totalMinutes": 40,
+    "ingredients": [
+      { "id": "chicken-thigh", "name": "Chicken thighs", "quantity": 800, "unit": "g" },
+      { "id": "broccoli", "name": "Broccoli", "quantity": 1, "unit": "head" },
+      { "id": "olive-oil", "name": "Olive oil", "quantity": 2, "unit": "tbsp" }
+    ]
+  },
+  {
+    "id": "tomato-pasta",
+    "name": "Weeknight Tomato Pasta",
+    "instructions": "Simmer the sauce, cook the pasta, then combine.",
+    "servings": 4,
+    "totalMinutes": 25,
+    "ingredients": [
+      { "id": "spaghetti", "name": "Spaghetti", "quantity": 400, "unit": "g" },
+      { "id": "canned-tomato", "name": "Canned tomatoes", "quantity": 800, "unit": "g" },
+      { "id": "garlic", "name": "Garlic", "quantity": 3, "unit": "clove" },
+      { "id": "olive-oil", "name": "Olive oil", "quantity": 1, "unit": "tbsp" }
+    ]
+  },
+  {
+    "id": "veggie-stir-fry",
+    "name": "Tofu Veggie Stir-Fry",
+    "instructions": "Fry the tofu, add the veg and sauce, then serve over rice.",
+    "servings": 3,
+    "totalMinutes": 30,
+    "ingredients": [
+      { "id": "tofu", "name": "Firm tofu", "quantity": 400, "unit": "g" },
+      { "id": "bell-pepper", "name": "Bell pepper", "quantity": 2, "unit": "whole" },
+      { "id": "soy-sauce", "name": "Soy sauce", "quantity": 3, "unit": "tbsp" },
+      { "id": "rice", "name": "Rice", "quantity": 300, "unit": "g" }
+    ]
+  }
+]

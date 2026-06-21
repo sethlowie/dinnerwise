@@ -133,3 +133,59 @@ func TestGetByIDNotFound(t *testing.T) {
 		t.Fatalf("err = %v, want ErrNotFound", err)
 	}
 }
+
+func TestSeedIfEmptyInsertsOnceAndIsIdempotent(t *testing.T) {
+	database := newTestDB(t)
+
+	if err := SeedIfEmpty(database); err != nil {
+		t.Fatalf("first seed: %v", err)
+	}
+	first, err := NewRepo(database).List(context.Background())
+	if err != nil {
+		t.Fatalf("list after first seed: %v", err)
+	}
+	if len(first) != 3 {
+		t.Fatalf("recipes after seed = %d, want 3", len(first))
+	}
+
+	// Second seed is a no-op (no duplicate-key error, count unchanged).
+	if err := SeedIfEmpty(database); err != nil {
+		t.Fatalf("second seed: %v", err)
+	}
+	second, err := NewRepo(database).List(context.Background())
+	if err != nil {
+		t.Fatalf("list after second seed: %v", err)
+	}
+	if len(second) != 3 {
+		t.Fatalf("recipes after second seed = %d, want 3", len(second))
+	}
+
+	// Shared ingredient (olive-oil) collapses to one row.
+	var ingredients int
+	if err := database.QueryRow(`SELECT COUNT(*) FROM ingredient WHERE id='olive-oil'`).
+		Scan(&ingredients); err != nil {
+		t.Fatalf("count olive-oil: %v", err)
+	}
+	if ingredients != 1 {
+		t.Fatalf("olive-oil rows = %d, want 1", ingredients)
+	}
+}
+
+func TestForeignKeyCascadeOnRecipeDelete(t *testing.T) {
+	database := newTestDB(t)
+	if err := SeedIfEmpty(database); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	if _, err := database.Exec(`DELETE FROM recipe WHERE id='tomato-pasta'`); err != nil {
+		t.Fatalf("delete recipe: %v", err)
+	}
+	var joins int
+	if err := database.QueryRow(
+		`SELECT COUNT(*) FROM recipe_ingredient WHERE recipe_id='tomato-pasta'`,
+	).Scan(&joins); err != nil {
+		t.Fatalf("count joins: %v", err)
+	}
+	if joins != 0 {
+		t.Fatalf("join rows after delete = %d, want 0 (cascade)", joins)
+	}
+}
