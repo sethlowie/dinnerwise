@@ -98,7 +98,7 @@ export const mealsRoute = createRoute({
     search: Record<string, unknown>,
   ): { sort?: "recent" | "rating"; fav?: boolean } => ({
     sort: search.sort === "rating" ? "rating" : search.sort === "recent" ? "recent" : undefined,
-    fav: search.fav === true || search.fav === "true" ? true : undefined,
+    fav: search.fav === true || search.fav === "true" || search.fav === "1" ? true : undefined,
   }),
   component: Meals,
 });
