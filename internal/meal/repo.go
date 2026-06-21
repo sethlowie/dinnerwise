@@ -30,6 +30,8 @@ func (r *Repo) List(ctx context.Context, sort string, favoritesOnly bool) ([]Mea
 	if sort == "rating" {
 		order = "ORDER BY m.rating DESC, times_cooked DESC, m.name"
 	}
+	// SAFE: `where` and `order` are hardcoded literals selected above from a
+	// server-side bool/string — never user input. Do not interpolate user input here.
 	query := fmt.Sprintf(`
 		SELECT m.id, m.name, m.cuisine, m.rating, COALESCE(m.recipe_id, ''),
 		       COUNT(mc.id) AS times_cooked, COALESCE(MAX(mc.cooked_on), '') AS last_cooked
