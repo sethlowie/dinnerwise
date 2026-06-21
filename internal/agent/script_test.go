@@ -38,7 +38,7 @@ func TestScriptMatchEmitsToolCallAndNavigate(t *testing.T) {
 
 func TestScriptMatchOrdering(t *testing.T) {
 	events := script("chicken please")
-	if len(events) < 4 {
+	if len(events) < 7 {
 		t.Fatalf("too few events: %d", len(events))
 	}
 	if _, ok := events[0].Event.(*agentv1.AskEvent_Thinking); !ok {

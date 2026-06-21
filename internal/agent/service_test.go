@@ -25,10 +25,12 @@ func TestAskStreamsScriptedEvents(t *testing.T) {
 	}
 
 	var sawNavigate, sawDone bool
+	var nav *agentv1.Navigate
 	for stream.Receive() {
 		switch stream.Msg().Event.(type) {
 		case *agentv1.AskEvent_Navigate:
 			sawNavigate = true
+			nav = stream.Msg().Event.(*agentv1.AskEvent_Navigate).Navigate
 		case *agentv1.AskEvent_Done:
 			sawDone = true
 		}
@@ -41,5 +43,11 @@ func TestAskStreamsScriptedEvents(t *testing.T) {
 	}
 	if !sawDone {
 		t.Fatal("expected a done event over the stream")
+	}
+	if nav.GetTo() != "/recipes" {
+		t.Fatalf("navigate.to = %q, want /recipes", nav.GetTo())
+	}
+	if nav.GetSearch()["ingredient"] != "chicken" {
+		t.Fatalf("search[ingredient] = %q, want chicken", nav.GetSearch()["ingredient"])
 	}
 }
