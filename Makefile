@@ -1,6 +1,7 @@
 SHELL := /bin/bash
 
 BUF_VERSION := v1.61.0
+DINNERWISE_DB ?= dinnerwise.db
 
 .PHONY: help
 help: ## List targets
@@ -16,23 +17,23 @@ install-tools: ## Install codegen tools (buf)
 gen: ## Generate Go + TS from protos
 	buf generate
 
-## ---- build (used by Tilt) ----
-.PHONY: build-server
-build-server: ## Cross-compile the server binary for the linux container
-	CGO_ENABLED=0 GOOS=linux GOARCH=$${GOARCH:-amd64} go build -trimpath -o ./build/dinnerwise ./cmd/dinnerwise
+## ---- build ----
+.PHONY: build
+build: ## Build the server binary to ./build/dinnerwise
+	CGO_ENABLED=0 go build -trimpath -o ./build/dinnerwise ./cmd/server
 
 ## ---- dev loop ----
-.PHONY: dev
-dev: ## Bring up the full stack via Tilt
-	tilt up
+.PHONY: run
+run: ## Run the Connect server (DB path via DINNERWISE_DB, default dinnerwise.db)
+	go run ./cmd/server
 
-.PHONY: down
-down: ## Tear down the Tilt stack
-	tilt down
+.PHONY: web
+web: ## Run the Vite dev server (web/app)
+	cd web/app && pnpm dev
 
 .PHONY: db-shell
-db-shell: ## Open a mongosh shell against the in-cluster MongoDB
-	kubectl exec -it deploy/mongodb -- mongosh dinnerwise
+db-shell: ## Open a sqlite3 shell against the local database
+	sqlite3 $(DINNERWISE_DB)
 
 ## ---- quality ----
 .PHONY: test

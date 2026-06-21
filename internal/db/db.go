@@ -5,6 +5,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"net/url"
 
 	_ "modernc.org/sqlite"
 )
@@ -13,9 +14,13 @@ import (
 // dinnerwise relies on, then verifies the connection. Pragmas are set in the
 // DSN so modernc applies them to every pooled connection.
 func Open(path string) (*sql.DB, error) {
+	// Escape path as a URI path: preserves "/" but percent-encodes "?", "#",
+	// spaces, etc., so an unusual DB path can't corrupt the DSN query string.
+	// Ordinary paths (e.g. "dinnerwise.db", "/abs/path.db") are unchanged.
+	escaped := (&url.URL{Path: path}).EscapedPath()
 	dsn := fmt.Sprintf(
 		"file:%s?_pragma=foreign_keys(ON)&_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)",
-		path,
+		escaped,
 	)
 	database, err := sql.Open("sqlite", dsn)
 	if err != nil {

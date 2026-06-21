@@ -1,6 +1,7 @@
 package db_test
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -21,6 +22,34 @@ func TestOpenEnablesForeignKeys(t *testing.T) {
 	}
 	if fk != 1 {
 		t.Fatalf("foreign_keys = %d, want 1", fk)
+	}
+}
+
+func TestOpenHandlesPathWithSpecialChars(t *testing.T) {
+	// A directory whose name contains a space and a "?" would corrupt a naive
+	// DSN. Open must escape the path so the DB opens at the real location.
+	dir := filepath.Join(t.TempDir(), "weird dir? name")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	path := filepath.Join(dir, "test.db")
+
+	database, err := db.Open(path)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer database.Close()
+
+	if err := db.ApplySchema(database, `CREATE TABLE t (id TEXT PRIMARY KEY);`); err != nil {
+		t.Fatalf("ApplySchema: %v", err)
+	}
+	if _, err := database.Exec(`INSERT INTO t (id) VALUES ('x')`); err != nil {
+		t.Fatalf("insert: %v", err)
+	}
+
+	// The file must exist at the real (unescaped) path.
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("db file not at expected path: %v", err)
 	}
 }
 

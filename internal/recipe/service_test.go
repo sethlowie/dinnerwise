@@ -9,14 +9,14 @@ import (
 )
 
 // newSeededService returns a Service backed by a migrated, fixture-seeded
-// temp database.
+// temp database, built through the public NewService constructor.
 func newSeededService(t *testing.T) *Service {
 	t.Helper()
 	database := newTestDB(t) // migrates
 	if err := SeedIfEmpty(database); err != nil {
 		t.Fatalf("seed: %v", err)
 	}
-	return &Service{repo: NewRepo(database)}
+	return NewService(NewRepo(database)).(*Service)
 }
 
 func TestServiceListRecipes(t *testing.T) {

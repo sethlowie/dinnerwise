@@ -26,17 +26,10 @@ type seedRecipe struct {
 }
 
 // SeedIfEmpty loads fixture recipes only when the recipe table is empty. It is
-// idempotent and safe to call on every startup. All inserts run in one
-// transaction; shared ingredients are de-duplicated via ON CONFLICT DO NOTHING.
+// idempotent and safe to call on every startup. The emptiness check and all
+// inserts run in one transaction, so the check and writes are atomic; shared
+// ingredients are de-duplicated via ON CONFLICT DO NOTHING.
 func SeedIfEmpty(database *sql.DB) error {
-	var count int
-	if err := database.QueryRow(`SELECT COUNT(*) FROM recipe`).Scan(&count); err != nil {
-		return fmt.Errorf("count recipes: %w", err)
-	}
-	if count > 0 {
-		return nil
-	}
-
 	var seeds []seedRecipe
 	if err := json.Unmarshal(recipesFixture, &seeds); err != nil {
 		return fmt.Errorf("parse fixtures: %w", err)
@@ -47,6 +40,16 @@ func SeedIfEmpty(database *sql.DB) error {
 		return fmt.Errorf("begin seed tx: %w", err)
 	}
 	defer tx.Rollback()
+
+	// Check emptiness inside the transaction so the count and the inserts are
+	// a single atomic unit (no check-then-act race between callers).
+	var count int
+	if err := tx.QueryRow(`SELECT COUNT(*) FROM recipe`).Scan(&count); err != nil {
+		return fmt.Errorf("count recipes: %w", err)
+	}
+	if count > 0 {
+		return nil
+	}
 
 	for _, s := range seeds {
 		if _, err := tx.Exec(
