@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"sync"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -36,21 +37,22 @@ func costUSD(model string, inTokens, outTokens int64) float64 {
 	return float64(inTokens)/1e6*p.inPerM + float64(outTokens)/1e6*p.outPerM
 }
 
-var costCounter metric.Float64Counter
+var (
+	costCounter     metric.Float64Counter
+	costCounterOnce sync.Once
+)
 
 func costInstrument() metric.Float64Counter {
-	if costCounter != nil {
-		return costCounter
-	}
-	m := otel.GetMeterProvider().Meter("github.com/sethlowie/dinnerwise/internal/agent")
-	c, err := m.Float64Counter("gen_ai.client.cost.usd",
-		metric.WithDescription("Approximate USD cost of generations"),
-		metric.WithUnit("{USD}"))
-	if err != nil {
-		return nil
-	}
-	costCounter = c
-	return c
+	costCounterOnce.Do(func() {
+		m := otel.GetMeterProvider().Meter("github.com/sethlowie/dinnerwise/internal/agent")
+		c, err := m.Float64Counter("gen_ai.client.cost.usd",
+			metric.WithDescription("Approximate USD cost of generations"),
+			metric.WithUnit("{USD}"))
+		if err == nil {
+			costCounter = c
+		}
+	})
+	return costCounter
 }
 
 // recordCost adds an approximate dollar cost for one generation.

@@ -1,7 +1,9 @@
 package agent
 
 import (
+	"context"
 	"math"
+	"sync"
 	"testing"
 )
 
@@ -25,4 +27,13 @@ func TestCostUSDZero(t *testing.T) {
 	if got := costUSD("gpt-5.4", 0, 0); got != 0 {
 		t.Fatalf("costUSD zero tokens = %v, want 0", got)
 	}
+}
+
+func TestRecordCostConcurrent(t *testing.T) {
+	var wg sync.WaitGroup
+	for i := 0; i < 20; i++ {
+		wg.Add(1)
+		go func() { defer wg.Done(); recordCost(context.Background(), "gpt-5.4", 100, 50) }()
+	}
+	wg.Wait()
 }
