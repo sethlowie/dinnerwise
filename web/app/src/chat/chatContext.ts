@@ -5,6 +5,7 @@ export type AssistantMessage = {
   toolCalls: { name: string; detail: string }[];
   text: string;
   done: boolean;
+  references: { kind: string; id: string; title: string; subtitle: string }[];
 };
 
 export type Turn = {

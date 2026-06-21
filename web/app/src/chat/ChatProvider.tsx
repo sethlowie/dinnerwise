@@ -12,6 +12,7 @@ const emptyAssistant: AssistantMessage = {
   toolCalls: [],
   text: "",
   done: false,
+  references: [],
 };
 
 export function ChatProvider({ children }: { children: ReactNode }) {
@@ -52,6 +53,20 @@ export function ChatProvider({ children }: { children: ReactNode }) {
               break;
             case "text":
               update((a) => ({ ...a, text: a.text + event.value.text }));
+              break;
+            case "reference":
+              update((a) => ({
+                ...a,
+                references: [
+                  ...a.references,
+                  {
+                    kind: event.value.kind,
+                    id: event.value.id,
+                    title: event.value.title,
+                    subtitle: event.value.subtitle,
+                  },
+                ],
+              }));
               break;
             case "navigate": {
               const opts = {

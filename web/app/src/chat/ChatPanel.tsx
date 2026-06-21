@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from "react";
+import { useRouter, type NavigateOptions } from "@tanstack/react-router";
 import { useChat } from "./chatContext";
 import type { Turn } from "./chatContext";
+import { initials, thumbStyle, tintFor } from "../lib/thumb";
 
 const CHIPS = [
   "What recipes have chicken?",
@@ -44,6 +46,18 @@ function status(turns: Turn[], streaming: boolean): { label: string; dot: string
 export function ChatPanel({ hero = false }: { hero?: boolean }) {
   const { turns, isStreaming, ask } = useChat();
   const [input, setInput] = useState("");
+  const router = useRouter();
+
+  function openRef(ref: { kind: string; id: string }) {
+    const opts = {
+      to: ref.kind === "meal" ? "/meals/$id" : "/recipes/$id",
+      params: { id: ref.id },
+    } as unknown as NavigateOptions;
+    void router.navigate(opts);
+  }
+  function replay(text: string) {
+    if (!isStreaming) ask(text);
+  }
 
   function submit(text: string) {
     const t = text.trim();
@@ -165,6 +179,41 @@ export function ChatPanel({ hero = false }: { hero?: boolean }) {
                     <span className="caret ml-0.5 text-primary">▋</span>
                   )}
                 </div>
+              )}
+
+              {t.assistant.references.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  {t.assistant.references.map((ref) => (
+                    <button
+                      key={`${ref.kind}-${ref.id}`}
+                      onClick={() => openRef(ref)}
+                      className="flex items-center gap-3 rounded-xl border border-border bg-card/60 p-2.5 text-left transition-colors hover:border-primary/40"
+                    >
+                      <div
+                        className="flex h-9 w-9 flex-none items-center justify-center rounded-lg font-mono text-xs font-semibold"
+                        style={thumbStyle(tintFor(ref.id))}
+                      >
+                        {initials(ref.title)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium">{ref.title}</div>
+                        <div className="truncate font-mono text-xs text-muted-foreground">
+                          {ref.subtitle}
+                        </div>
+                      </div>
+                      <span className="flex-none font-mono text-muted-foreground">→</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {t.assistant.done && (
+                <button
+                  onClick={() => replay(t.userText)}
+                  className="self-start font-mono text-xs text-primary hover:opacity-80"
+                >
+                  ↻ replay this run
+                </button>
               )}
             </div>
           );
