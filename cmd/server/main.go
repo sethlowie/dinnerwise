@@ -54,7 +54,9 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.Handle(recipev1connect.NewRecipeServiceHandler(recipe.NewService(repo)))
-	mux.Handle(agentv1connect.NewAgentServiceHandler(agent.NewService()))
+	mux.Handle(agentv1connect.NewAgentServiceHandler(
+		agent.NewService(recipe.NewRepo(database), meal.NewRepo(database)),
+	))
 	mux.Handle(mealv1connect.NewMealServiceHandler(meal.NewService(meal.NewRepo(database))))
 
 	log.Printf("server: listening on %s", addr)

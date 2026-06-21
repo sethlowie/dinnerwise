@@ -18,6 +18,13 @@ message Navigate {
 }
 message Done {}
 
+message Reference {
+  string kind = 1;
+  string id = 2;
+  string title = 3;
+  string subtitle = 4;
+}
+
 message AskEvent {
   oneof event {
     TextDelta text = 1;
@@ -25,6 +32,7 @@ message AskEvent {
     ToolCall tool_call = 3;
     Navigate navigate = 4;
     Done done = 5;
+    Reference reference = 6;
   }
 }
 
