@@ -14,7 +14,7 @@ const routeTree = rootRoute.addChildren([
   mealDetailRoute,
 ]);
 
-export const router = createRouter({ routeTree });
+export const router = createRouter({ routeTree, defaultViewTransition: true });
 
 // Register the router instance for full type inference across the app.
 declare module "@tanstack/react-router" {

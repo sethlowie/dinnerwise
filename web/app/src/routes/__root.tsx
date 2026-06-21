@@ -1,14 +1,13 @@
-import { createRootRoute, Outlet } from "@tanstack/react-router";
+import { createRootRoute, Outlet, useRouterState } from "@tanstack/react-router";
 import { ChatProvider } from "../chat/ChatProvider";
 import { ChatPanel } from "../chat/ChatPanel";
 import { Sidebar } from "../chat/Sidebar";
-import { useChat } from "../chat/chatContext";
 
 function Shell() {
-  const { turns } = useChat();
-  const active = turns.length > 0;
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isHome = pathname === "/";
 
-  if (!active) {
+  if (isHome) {
     return (
       <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background text-foreground">
         <ChatPanel hero />
@@ -24,7 +23,10 @@ function Shell() {
           <Outlet />
         </div>
       </main>
-      <aside className="flex h-screen w-[360px] flex-none flex-col border-l border-border bg-card/70 backdrop-blur">
+      <aside
+        style={{ viewTransitionName: "dock" }}
+        className="flex h-screen w-[360px] flex-none flex-col border-l border-border bg-card/70 backdrop-blur"
+      >
         <ChatPanel />
       </aside>
     </div>
