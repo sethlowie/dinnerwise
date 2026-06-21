@@ -20,7 +20,7 @@ func TestLiveOpenAI(t *testing.T) {
 		model = "gpt-5-nano"
 	}
 	recipes, meals := seededRepos(t)
-	a := newLLMAgent(newOpenAIClient(key, model), recipes, meals)
+	a := newLLMAgent(newOpenAIClient(key, model, nil), recipes, meals)
 
 	var text, done bool
 	err := a.Run(context.Background(), "What can I cook tonight?", func(e *agentv1.AskEvent) error {

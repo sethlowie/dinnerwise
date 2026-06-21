@@ -9,10 +9,12 @@ import (
 	"time"
 
 	connect "connectrpc.com/connect"
+	"github.com/grafana/sigil-sdk/go/sigil"
 	agentv1 "github.com/sethlowie/dinnerwise/internal/agent/v1"
 	"github.com/sethlowie/dinnerwise/internal/agent/v1/agentv1connect"
 	"github.com/sethlowie/dinnerwise/internal/config"
 	"github.com/sethlowie/dinnerwise/internal/meal"
+	"github.com/sethlowie/dinnerwise/internal/observability"
 	"github.com/sethlowie/dinnerwise/internal/recipe"
 )
 
@@ -27,9 +29,13 @@ type Service struct {
 
 // NewService returns a handler backed by the real OpenAI agent when cfg has a
 // key, and the scripted fallback (with a lifelike 60 ms delay) otherwise.
-func NewService(cfg config.Config, recipes *recipe.Repo, meals *meal.Repo) agentv1connect.AgentServiceHandler {
+func NewService(cfg config.Config, providers *observability.Providers, recipes *recipe.Repo, meals *meal.Repo) agentv1connect.AgentServiceHandler {
 	if cfg.HasOpenAI() {
-		client := newOpenAIClient(cfg.OpenAIAPIKey, cfg.OpenAIModel)
+		var sclient *sigil.Client
+		if providers != nil {
+			sclient = providers.Sigil
+		}
+		client := newOpenAIClient(cfg.OpenAIAPIKey, cfg.OpenAIModel, sclient)
 		return &Service{recipes: recipes, meals: meals, agent: newLLMAgent(client, recipes, meals)}
 	}
 	return &Service{recipes: recipes, meals: meals, delay: 60 * time.Millisecond}
