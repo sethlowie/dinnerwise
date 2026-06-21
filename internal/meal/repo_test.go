@@ -1,7 +1,9 @@
 package meal
 
 import (
+	"context"
 	"database/sql"
+	"errors"
 	"path/filepath"
 	"testing"
 
@@ -43,5 +45,97 @@ func TestMigrateIsIdempotentAndCreatesTables(t *testing.T) {
 		).Scan(&name); err != nil {
 			t.Fatalf("table %q missing: %v", table, err)
 		}
+	}
+}
+
+// insertMeal writes a meal and its cook rows directly (no seeding).
+func insertMeal(t *testing.T, database *sql.DB, m Meal, cooks []Cook) {
+	t.Helper()
+	var rid any
+	if m.RecipeID != "" {
+		rid = m.RecipeID
+	}
+	if _, err := database.Exec(
+		`INSERT INTO meal (id, name, cuisine, rating, recipe_id) VALUES (?, ?, ?, ?, ?)`,
+		m.ID, m.Name, m.Cuisine, m.Rating, rid,
+	); err != nil {
+		t.Fatalf("insert meal: %v", err)
+	}
+	for _, c := range cooks {
+		if _, err := database.Exec(
+			`INSERT INTO meal_cook (meal_id, cooked_on, note) VALUES (?, ?, ?)`,
+			m.ID, c.CookedOn, c.Note,
+		); err != nil {
+			t.Fatalf("insert cook: %v", err)
+		}
+	}
+}
+
+func TestListDerivesCountsAndSorts(t *testing.T) {
+	database := newTestDB(t)
+	insertMeal(t, database, Meal{ID: "a", Name: "Alpha", Cuisine: "Thai", Rating: 5}, []Cook{
+		{CookedOn: "2026-06-01"}, {CookedOn: "2026-06-08"}, {CookedOn: "2026-06-15"},
+	})
+	insertMeal(t, database, Meal{ID: "b", Name: "Bravo", Cuisine: "Italian", Rating: 3}, []Cook{
+		{CookedOn: "2026-06-20"},
+	})
+
+	repo := NewRepo(database)
+
+	// recent: Bravo (last 06-20) before Alpha (last 06-15)
+	recent, err := repo.List(context.Background(), "recent", false)
+	if err != nil {
+		t.Fatalf("List recent: %v", err)
+	}
+	if len(recent) != 2 || recent[0].ID != "b" {
+		t.Fatalf("recent order wrong: %+v", recent)
+	}
+	// derived counts
+	if recent[1].ID != "a" || recent[1].TimesCooked != 3 || recent[1].LastCooked != "2026-06-15" {
+		t.Fatalf("derived stats wrong: %+v", recent[1])
+	}
+
+	// rating: Alpha (5) before Bravo (3)
+	byRating, err := repo.List(context.Background(), "rating", false)
+	if err != nil {
+		t.Fatalf("List rating: %v", err)
+	}
+	if byRating[0].ID != "a" {
+		t.Fatalf("rating order wrong: %+v", byRating)
+	}
+
+	// favoritesOnly: only rating>=4 (Alpha)
+	favs, err := repo.List(context.Background(), "recent", true)
+	if err != nil {
+		t.Fatalf("List favs: %v", err)
+	}
+	if len(favs) != 1 || favs[0].ID != "a" {
+		t.Fatalf("favorites filter wrong: %+v", favs)
+	}
+}
+
+func TestGetByIDReturnsMealHistoryAndLink(t *testing.T) {
+	database := newTestDB(t)
+	insertMeal(t, database, Meal{ID: "a", Name: "Alpha", Cuisine: "Thai", Rating: 5, RecipeID: "tomato-pasta"}, []Cook{
+		{CookedOn: "2026-06-01", Note: "first"}, {CookedOn: "2026-06-15", Note: "latest"},
+	})
+
+	m, cooks, err := NewRepo(database).GetByID(context.Background(), "a")
+	if err != nil {
+		t.Fatalf("GetByID: %v", err)
+	}
+	if m.TimesCooked != 2 || m.LastCooked != "2026-06-15" || m.RecipeID != "tomato-pasta" {
+		t.Fatalf("meal wrong: %+v", m)
+	}
+	if len(cooks) != 2 || cooks[0].CookedOn != "2026-06-15" {
+		t.Fatalf("cooks newest-first wrong: %+v", cooks)
+	}
+}
+
+func TestGetByIDNotFound(t *testing.T) {
+	database := newTestDB(t)
+	_, _, err := NewRepo(database).GetByID(context.Background(), "nope")
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("err = %v, want ErrNotFound", err)
 	}
 }
