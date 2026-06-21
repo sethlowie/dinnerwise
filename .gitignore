@@ -19,3 +19,7 @@ local-k8s/env-config.yaml
 **/*_pb.ts
 **/*.gen.go
 
+# SQLite database files
+*.db
+*.db-wal
+*.db-shm

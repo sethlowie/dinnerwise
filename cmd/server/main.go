@@ -1,12 +1,15 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
 
+	"github.com/sethlowie/dinnerwise/internal/db"
 	"github.com/sethlowie/dinnerwise/internal/foo"
 	"github.com/sethlowie/dinnerwise/internal/foo/v1/foov1connect"
+	"github.com/sethlowie/dinnerwise/internal/recipe"
 )
 
 func main() {
@@ -14,6 +17,28 @@ func main() {
 	if addr == "" {
 		addr = ":8080"
 	}
+	dbPath := os.Getenv("DINNERWISE_DB")
+	if dbPath == "" {
+		dbPath = "dinnerwise.db"
+	}
+
+	database, err := db.Open(dbPath)
+	if err != nil {
+		log.Fatalf("server: open db: %v", err)
+	}
+	defer database.Close()
+
+	if err := recipe.Migrate(database); err != nil {
+		log.Fatalf("server: migrate: %v", err)
+	}
+	if err := recipe.SeedIfEmpty(database); err != nil {
+		log.Fatalf("server: seed: %v", err)
+	}
+	recipes, err := recipe.NewRepo(database).List(context.Background())
+	if err != nil {
+		log.Fatalf("server: list recipes: %v", err)
+	}
+	log.Printf("server: %d recipes loaded from %s", len(recipes), dbPath)
 
 	mux := http.NewServeMux()
 	mux.Handle(foov1connect.NewFooServiceHandler(foo.NewService()))
