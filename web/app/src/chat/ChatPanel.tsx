@@ -73,6 +73,7 @@ export function ChatPanel({ hero = false }: { hero?: boolean }) {
   const inputPill = (
     <form
       onSubmit={onSubmit}
+      style={{ viewTransitionName: "ask-input" }}
       className="flex items-center gap-2.5 rounded-2xl border border-border bg-muted/40 py-2 pl-5 pr-2 shadow-lg"
     >
       <input

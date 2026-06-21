@@ -3,7 +3,10 @@ import { ThemeToggle } from "../theme";
 
 export function Sidebar() {
   return (
-    <aside className="flex w-52 flex-none flex-col border-r border-border bg-card/60 p-5 backdrop-blur">
+    <aside
+      style={{ viewTransitionName: "sidebar" }}
+      className="flex w-52 flex-none flex-col border-r border-border bg-card/60 p-5 backdrop-blur"
+    >
       <div className="mb-8 flex items-center gap-3">
         <div className="brand-mark h-7 w-7 rounded-[9px]" />
         <span className="text-base font-semibold tracking-tight">Sous</span>
