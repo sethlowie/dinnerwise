@@ -29,6 +29,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     ]);
     setIsStreaming(true);
 
+    const startedOnHome = window.location.pathname === "/";
+    let navigated = false;
+
     const update = (fn: (a: AssistantMessage) => AssistantMessage) =>
       setTurns((prev) =>
         prev.map((t) => (t.id === id ? { ...t, assistant: fn(t.assistant) } : t)),
@@ -74,12 +77,16 @@ export function ChatProvider({ children }: { children: ReactNode }) {
                 search: event.value.search,
               } as unknown as NavigateOptions;
               void router.navigate(opts);
+              navigated = true;
               break;
             }
             case "done":
               update((a) => ({ ...a, done: true }));
               break;
           }
+        }
+        if (!navigated && startedOnHome) {
+          void router.navigate({ to: "/recipes" });
         }
       } finally {
         setIsStreaming(false);

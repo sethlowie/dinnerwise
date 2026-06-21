@@ -108,3 +108,77 @@ body {
 .spinner {
   animation: spin 0.8s linear infinite;
 }
+
+/* ---- View Transitions: shell morph (centered hero <-> docked app) ---- */
+/* The router wraps navigations in document.startViewTransition and tags each
+   with a type: enter-app (home -> app route), leave-app (app route -> home),
+   within-app (between app routes). On enter/leave the hero input grows into (or
+   shrinks out of) the full chat dock — both share view-transition-name: dock —
+   and the sidebar slides in/out. Within the app the shell holds still and only
+   the main content cross-fades. */
+
+/* The UA cross-fade blends snapshots with plus-lighter, which over-sums our
+   translucent surfaces into a brightness flash mid-fade. Normal blending fixes
+   it everywhere. */
+::view-transition-old(*),
+::view-transition-new(*) {
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.35s;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* The hero input grows into the full dock panel (and back): one named element
+   on each side of the transition, so the browser interpolates its geometry from
+   the centered pill to the right-hand panel while the contents cross-fade. */
+::view-transition-group(dock),
+::view-transition-old(dock),
+::view-transition-new(dock) {
+  animation-duration: 0.5s;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes vtInLeft {
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes vtOutLeft {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateX(-24px); }
+}
+
+/* Sidebar slides in from / out to the left (it only exists on the app side, so
+   these new/old animations only fire on enter-app / leave-app). */
+::view-transition-new(sidebar) { animation: vtInLeft 0.4s cubic-bezier(0.4, 0, 0.2, 1) both; }
+::view-transition-old(sidebar) { animation: vtOutLeft 0.3s ease both; }
+
+/* Within the app the shell is unchanged — freeze every shell pseudo so it does
+   not drift, scale, or fade; only the main content (root) cross-fades. */
+html:active-view-transition-type(within-app)::view-transition-group(sidebar),
+html:active-view-transition-type(within-app)::view-transition-old(sidebar),
+html:active-view-transition-type(within-app)::view-transition-new(sidebar),
+html:active-view-transition-type(within-app)::view-transition-group(dock),
+html:active-view-transition-type(within-app)::view-transition-old(dock),
+html:active-view-transition-type(within-app)::view-transition-new(dock) {
+  animation: none !important;
+}
+
+/* The panels are translucent, so rendering both their old and new snapshots
+   stacks two semi-transparent layers and doubles the opacity — a visible hue
+   shift for the duration of the transition. Drop the old snapshot so only a
+   single layer (matching the live panel) shows. */
+html:active-view-transition-type(within-app)::view-transition-old(sidebar),
+html:active-view-transition-type(within-app)::view-transition-old(dock) {
+  opacity: 0 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
