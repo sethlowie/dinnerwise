@@ -63,9 +63,12 @@ func toProtoRecipe(r Recipe) *recipev1.Recipe {
 	return &recipev1.Recipe{
 		Id:           r.ID,
 		Name:         r.Name,
-		Instructions: r.Instructions,
+		Cuisine:      r.Cuisine,
+		Difficulty:   r.Difficulty,
 		Servings:     int32(r.Servings),
 		TotalMinutes: int32(r.TotalMinutes),
+		Steps:        r.Steps,
 		Ingredients:  ingredients,
+		InPantry:     r.InPantry,
 	}
 }

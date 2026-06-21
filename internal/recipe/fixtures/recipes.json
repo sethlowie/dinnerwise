@@ -2,9 +2,15 @@
   {
     "id": "sheet-pan-chicken",
     "name": "Sheet-Pan Chicken & Veg",
-    "instructions": "Toss everything with oil and roast at 220C for 30 minutes.",
+    "cuisine": "American",
+    "difficulty": "Easy",
     "servings": 4,
     "totalMinutes": 40,
+    "steps": [
+      "Heat the oven to 220°C (425°F).",
+      "Toss the chicken and broccoli with olive oil, salt, and pepper.",
+      "Spread on a sheet pan and roast 30 minutes until golden."
+    ],
     "ingredients": [
       { "id": "chicken-thigh", "name": "Chicken thighs", "quantity": 800, "unit": "g" },
       { "id": "broccoli", "name": "Broccoli", "quantity": 1, "unit": "head" },
@@ -14,9 +20,15 @@
   {
     "id": "tomato-pasta",
     "name": "Weeknight Tomato Pasta",
-    "instructions": "Simmer the sauce, cook the pasta, then combine.",
+    "cuisine": "Italian",
+    "difficulty": "Easy",
     "servings": 4,
     "totalMinutes": 25,
+    "steps": [
+      "Boil the spaghetti until al dente; reserve a little pasta water.",
+      "Sizzle the garlic in olive oil, add the canned tomatoes, and simmer 10 minutes.",
+      "Toss the pasta through the sauce, loosening with pasta water, and serve."
+    ],
     "ingredients": [
       { "id": "spaghetti", "name": "Spaghetti", "quantity": 400, "unit": "g" },
       { "id": "canned-tomato", "name": "Canned tomatoes", "quantity": 800, "unit": "g" },
@@ -27,9 +39,15 @@
   {
     "id": "veggie-stir-fry",
     "name": "Tofu Veggie Stir-Fry",
-    "instructions": "Fry the tofu, add the veg and sauce, then serve over rice.",
+    "cuisine": "Chinese",
+    "difficulty": "Easy",
     "servings": 3,
     "totalMinutes": 30,
+    "steps": [
+      "Press and cube the tofu, then fry until golden.",
+      "Add the bell pepper and stir-fry 3 minutes.",
+      "Add the soy sauce, toss, and serve over rice."
+    ],
     "ingredients": [
       { "id": "tofu", "name": "Firm tofu", "quantity": 400, "unit": "g" },
       { "id": "bell-pepper", "name": "Bell pepper", "quantity": 2, "unit": "whole" },

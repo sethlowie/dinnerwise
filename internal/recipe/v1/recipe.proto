@@ -5,10 +5,14 @@ package internal.recipe.v1;
 message Recipe {
   string id = 1;
   string name = 2;
-  string instructions = 3;
+  reserved 3;  // was: string instructions
   int32 servings = 4;
   int32 total_minutes = 5;
   repeated RecipeIngredient ingredients = 6;
+  string cuisine = 7;
+  string difficulty = 8;
+  repeated string steps = 9;
+  bool in_pantry = 10;
 }
 
 message RecipeIngredient {

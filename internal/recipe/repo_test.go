@@ -44,17 +44,23 @@ func TestMigrateIsIdempotentAndCreatesTables(t *testing.T) {
 	}
 }
 
-// insertRecipe is a test helper that writes a recipe, its ingredients, and the
-// join rows directly (no seeding).
+// insertRecipe writes a recipe, its steps, ingredients, and join rows directly.
 func insertRecipe(t *testing.T, database *sql.DB, r Recipe) {
 	t.Helper()
-	_, err := database.Exec(
-		`INSERT INTO recipe (id, name, instructions, servings, total_minutes)
-		 VALUES (?, ?, ?, ?, ?)`,
-		r.ID, r.Name, r.Instructions, r.Servings, r.TotalMinutes,
-	)
-	if err != nil {
+	if _, err := database.Exec(
+		`INSERT INTO recipe (id, name, cuisine, difficulty, servings, total_minutes)
+		 VALUES (?, ?, ?, ?, ?, ?)`,
+		r.ID, r.Name, r.Cuisine, r.Difficulty, r.Servings, r.TotalMinutes,
+	); err != nil {
 		t.Fatalf("insert recipe: %v", err)
+	}
+	for i, s := range r.Steps {
+		if _, err := database.Exec(
+			`INSERT INTO recipe_step (recipe_id, position, text) VALUES (?, ?, ?)`,
+			r.ID, i+1, s,
+		); err != nil {
+			t.Fatalf("insert step: %v", err)
+		}
 	}
 	for _, ing := range r.Ingredients {
 		if _, err := database.Exec(
@@ -69,6 +75,18 @@ func insertRecipe(t *testing.T, database *sql.DB, r Recipe) {
 			r.ID, ing.IngredientID, ing.Quantity, ing.Unit,
 		); err != nil {
 			t.Fatalf("insert join: %v", err)
+		}
+	}
+}
+
+// addPantry marks ingredient ids as on-hand (they must already exist).
+func addPantry(t *testing.T, database *sql.DB, ids ...string) {
+	t.Helper()
+	for _, id := range ids {
+		if _, err := database.Exec(
+			`INSERT INTO pantry_item (ingredient_id) VALUES (?) ON CONFLICT DO NOTHING`, id,
+		); err != nil {
+			t.Fatalf("add pantry %q: %v", id, err)
 		}
 	}
 }
@@ -187,5 +205,85 @@ func TestForeignKeyCascadeOnRecipeDelete(t *testing.T) {
 	}
 	if joins != 0 {
 		t.Fatalf("join rows after delete = %d, want 0 (cascade)", joins)
+	}
+}
+
+func TestStepsAssembledInOrder(t *testing.T) {
+	database := newTestDB(t)
+	insertRecipe(t, database, Recipe{
+		ID: "r", Name: "R", Cuisine: "Test", Difficulty: "Easy",
+		Steps:       []string{"first", "second", "third"},
+		Ingredients: []RecipeIngredient{{IngredientID: "egg", Name: "Egg"}},
+	})
+
+	rec, err := NewRepo(database).GetByID(context.Background(), "r")
+	if err != nil {
+		t.Fatalf("GetByID: %v", err)
+	}
+	if rec.Cuisine != "Test" || rec.Difficulty != "Easy" {
+		t.Fatalf("metadata wrong: %+v", rec)
+	}
+	want := []string{"first", "second", "third"}
+	if len(rec.Steps) != 3 || rec.Steps[0] != want[0] || rec.Steps[2] != want[2] {
+		t.Fatalf("steps wrong/out of order: %v", rec.Steps)
+	}
+}
+
+func TestInPantryDerivation(t *testing.T) {
+	database := newTestDB(t)
+	insertRecipe(t, database, Recipe{
+		ID: "have", Name: "Have",
+		Ingredients: []RecipeIngredient{{IngredientID: "egg", Name: "Egg"}, {IngredientID: "milk", Name: "Milk"}},
+	})
+	insertRecipe(t, database, Recipe{
+		ID: "missing", Name: "Missing",
+		Ingredients: []RecipeIngredient{{IngredientID: "egg", Name: "Egg"}, {IngredientID: "flour", Name: "Flour"}},
+	})
+	insertRecipe(t, database, Recipe{ID: "empty", Name: "Empty"}) // no ingredients
+	addPantry(t, database, "egg", "milk")                          // not flour
+
+	list, err := NewRepo(database).List(context.Background())
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	got := map[string]bool{}
+	for _, r := range list {
+		got[r.ID] = r.InPantry
+	}
+	if !got["have"] {
+		t.Fatal("have should be in pantry")
+	}
+	if got["missing"] {
+		t.Fatal("missing should not be in pantry (flour absent)")
+	}
+	if got["empty"] {
+		t.Fatal("empty (no ingredients) should not be in pantry")
+	}
+}
+
+func TestSeedSetsMetadataStepsAndPantry(t *testing.T) {
+	database := newTestDB(t)
+	if err := SeedIfEmpty(database); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	repo := NewRepo(database)
+
+	pasta, err := repo.GetByID(context.Background(), "tomato-pasta")
+	if err != nil {
+		t.Fatalf("get pasta: %v", err)
+	}
+	if pasta.Cuisine != "Italian" || len(pasta.Steps) == 0 {
+		t.Fatalf("pasta metadata/steps wrong: %+v", pasta)
+	}
+	if !pasta.InPantry {
+		t.Fatal("tomato-pasta should be in pantry per the fixture")
+	}
+
+	stir, err := repo.GetByID(context.Background(), "veggie-stir-fry")
+	if err != nil {
+		t.Fatalf("get stir-fry: %v", err)
+	}
+	if stir.InPantry {
+		t.Fatal("veggie-stir-fry should NOT be in pantry per the fixture")
 	}
 }

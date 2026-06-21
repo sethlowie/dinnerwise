@@ -62,3 +62,16 @@ func TestServiceGetRecipeNotFound(t *testing.T) {
 		t.Fatalf("code = %v, want %v", got, connect.CodeNotFound)
 	}
 }
+
+func TestServiceMapsMetadataAndPantry(t *testing.T) {
+	svc := newSeededService(t)
+	resp, err := svc.GetRecipe(context.Background(),
+		connect.NewRequest(&recipev1.GetRecipeRequest{Id: "tomato-pasta"}))
+	if err != nil {
+		t.Fatalf("GetRecipe: %v", err)
+	}
+	r := resp.Msg.Recipe
+	if r.GetCuisine() != "Italian" || len(r.GetSteps()) == 0 || !r.GetInPantry() {
+		t.Fatalf("mapped recipe wrong: %+v", r)
+	}
+}

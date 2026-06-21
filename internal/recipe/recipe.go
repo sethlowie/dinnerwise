@@ -3,14 +3,18 @@
 // mapped to proto in the service layer if a service is ever exposed.
 package recipe
 
-// Recipe is a recipe with its assembled ingredient lines.
+// Recipe is a recipe with metadata, ordered method steps, and assembled
+// ingredient lines. InPantry is true when every ingredient is in the pantry.
 type Recipe struct {
 	ID           string
 	Name         string
-	Instructions string
+	Cuisine      string
+	Difficulty   string
 	Servings     int
 	TotalMinutes int
+	Steps        []string
 	Ingredients  []RecipeIngredient
+	InPantry     bool
 }
 
 // RecipeIngredient is one ingredient line on a recipe (ingredient name joined

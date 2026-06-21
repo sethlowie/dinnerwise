@@ -1,7 +1,8 @@
 CREATE TABLE IF NOT EXISTS recipe (
   id            TEXT PRIMARY KEY,
   name          TEXT NOT NULL,
-  instructions  TEXT NOT NULL DEFAULT '',
+  cuisine       TEXT NOT NULL DEFAULT '',
+  difficulty    TEXT NOT NULL DEFAULT '',
   servings      INTEGER NOT NULL DEFAULT 0,
   total_minutes INTEGER NOT NULL DEFAULT 0,
   created_at    TEXT NOT NULL DEFAULT (datetime('now'))
@@ -18,4 +19,15 @@ CREATE TABLE IF NOT EXISTS recipe_ingredient (
   quantity      REAL NOT NULL DEFAULT 0,
   unit          TEXT NOT NULL DEFAULT '',
   PRIMARY KEY (recipe_id, ingredient_id)
+);
+
+CREATE TABLE IF NOT EXISTS recipe_step (
+  recipe_id TEXT NOT NULL REFERENCES recipe(id) ON DELETE CASCADE,
+  position  INTEGER NOT NULL,
+  text      TEXT NOT NULL,
+  PRIMARY KEY (recipe_id, position)
+);
+
+CREATE TABLE IF NOT EXISTS pantry_item (
+  ingredient_id TEXT PRIMARY KEY REFERENCES ingredient(id) ON DELETE CASCADE
 );
