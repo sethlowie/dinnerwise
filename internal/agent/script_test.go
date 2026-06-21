@@ -164,10 +164,11 @@ func TestRespondOrdering(t *testing.T) {
 		return -1
 	}
 	tool := idx(func(e *agentv1.AskEvent) bool { _, ok := e.Event.(*agentv1.AskEvent_ToolCall); return ok })
+	thinking := idx(func(e *agentv1.AskEvent) bool { _, ok := e.Event.(*agentv1.AskEvent_Thinking); return ok })
 	text := idx(func(e *agentv1.AskEvent) bool { _, ok := e.Event.(*agentv1.AskEvent_Text); return ok })
 	ref := idx(func(e *agentv1.AskEvent) bool { _, ok := e.Event.(*agentv1.AskEvent_Reference); return ok })
 	done := idx(func(e *agentv1.AskEvent) bool { _, ok := e.Event.(*agentv1.AskEvent_Done); return ok })
-	if !(tool < text && text < ref && ref < done) {
-		t.Fatalf("ordering wrong: tool=%d text=%d ref=%d done=%d", tool, text, ref, done)
+	if !(thinking < tool && tool < text && text < ref && ref < done) {
+		t.Fatalf("ordering wrong: thinking=%d tool=%d text=%d ref=%d done=%d", thinking, tool, text, ref, done)
 	}
 }
