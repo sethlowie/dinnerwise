@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/joho/godotenv"
 	"github.com/sethlowie/dinnerwise/internal/agent"
 	"github.com/sethlowie/dinnerwise/internal/agent/v1/agentv1connect"
+	"github.com/sethlowie/dinnerwise/internal/config"
 	"github.com/sethlowie/dinnerwise/internal/db"
 	"github.com/sethlowie/dinnerwise/internal/meal"
 	"github.com/sethlowie/dinnerwise/internal/meal/v1/mealv1connect"
@@ -16,6 +18,9 @@ import (
 )
 
 func main() {
+	_ = godotenv.Load()
+	cfg := config.Load()
+
 	addr := os.Getenv("ADDR")
 	if addr == "" {
 		addr = ":8080"
@@ -54,8 +59,13 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.Handle(recipev1connect.NewRecipeServiceHandler(recipe.NewService(repo)))
+	if cfg.HasOpenAI() {
+		log.Printf("server: agent backend = openai (%s)", cfg.OpenAIModel)
+	} else {
+		log.Print("server: agent backend = scripted (no OPENAI_API_KEY)")
+	}
 	mux.Handle(agentv1connect.NewAgentServiceHandler(
-		agent.NewService(recipe.NewRepo(database), meal.NewRepo(database)),
+		agent.NewService(cfg, recipe.NewRepo(database), meal.NewRepo(database)),
 	))
 	mux.Handle(mealv1connect.NewMealServiceHandler(meal.NewService(meal.NewRepo(database))))
 
