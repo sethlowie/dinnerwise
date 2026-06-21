@@ -10,11 +10,10 @@ function Home() {
         with semantic Tailwind tokens that respond to light/dark.
       </p>
       <Link
-        to="/foo"
-        search={{ id: "123" }}
+        to="/recipes"
         className="inline-block rounded-lg bg-primary px-4 py-2 text-primary-foreground hover:opacity-90"
       >
-        Try the Foo demo →
+        Browse recipes →
       </Link>
     </div>
   );

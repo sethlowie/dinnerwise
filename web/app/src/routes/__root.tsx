@@ -15,11 +15,10 @@ function RootLayout() {
               Home
             </Link>
             <Link
-              to="/foo"
-              search={{ id: "123" }}
+              to="/recipes"
               className="text-muted-foreground [&.active]:text-foreground"
             >
-              Foo
+              Recipes
             </Link>
           </nav>
           <ThemeToggle />
