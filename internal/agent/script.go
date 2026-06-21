@@ -70,12 +70,7 @@ func respond(ctx context.Context, recipes *recipe.Repo, meals *meal.Repo, text s
 		if err != nil {
 			return nil, err
 		}
-		var have []recipe.Recipe
-		for _, r := range rs {
-			if r.InPantry {
-				have = append(have, r)
-			}
-		}
+		have := selectInPantry(rs)
 		evs := []*agentv1.AskEvent{
 			thinkingEvent("Checking what's in your pantry…"),
 			thinkingEvent("Matching recipes you can make now…"),
@@ -92,12 +87,7 @@ func respond(ctx context.Context, recipes *recipe.Repo, meals *meal.Repo, text s
 		if err != nil {
 			return nil, err
 		}
-		var quick []recipe.Recipe
-		for _, r := range rs {
-			if r.TotalMinutes <= 30 {
-				quick = append(quick, r)
-			}
-		}
+		quick := selectMaxMinutes(rs, 30)
 		evs := []*agentv1.AskEvent{
 			thinkingEvent("Filtering by cook time…"),
 			thinkingEvent("Keeping 30 minutes or less…"),
@@ -114,15 +104,7 @@ func respond(ctx context.Context, recipes *recipe.Repo, meals *meal.Repo, text s
 		if err != nil {
 			return nil, err
 		}
-		var match []recipe.Recipe
-		for _, r := range rs {
-			for _, i := range r.Ingredients {
-				if strings.Contains(strings.ToLower(i.Name), ing) {
-					match = append(match, r)
-					break
-				}
-			}
-		}
+		match := selectByIngredient(rs, ing)
 		evs := []*agentv1.AskEvent{
 			thinkingEvent("Searching recipes with " + ing + "…"),
 			toolCallEvent("search_recipes", "ingredient="+ing),
@@ -150,14 +132,6 @@ func recipeRefs(rs []recipe.Recipe) []*agentv1.AskEvent {
 		out = append(out, referenceEvent("recipe", r.ID, r.Name, recipeSubtitle(r)))
 	}
 	return out
-}
-
-func recipeSubtitle(r recipe.Recipe) string {
-	return fmt.Sprintf("%s · %d min", r.Cuisine, r.TotalMinutes)
-}
-
-func mealSubtitle(m meal.Meal) string {
-	return fmt.Sprintf("%d★ · cooked %d×", m.Rating, m.TimesCooked)
 }
 
 // textChunks splits a reply into a few TextDelta events to mimic token streaming.
