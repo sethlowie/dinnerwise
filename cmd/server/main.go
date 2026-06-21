@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/sethlowie/dinnerwise/internal/agent"
+	"github.com/sethlowie/dinnerwise/internal/agent/v1/agentv1connect"
 	"github.com/sethlowie/dinnerwise/internal/db"
 	"github.com/sethlowie/dinnerwise/internal/recipe"
 	"github.com/sethlowie/dinnerwise/internal/recipe/v1/recipev1connect"
@@ -43,6 +45,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.Handle(recipev1connect.NewRecipeServiceHandler(recipe.NewService(repo)))
+	mux.Handle(agentv1connect.NewAgentServiceHandler(agent.NewService()))
 
 	log.Printf("server: listening on %s", addr)
 	if err := http.ListenAndServe(addr, withCORS(mux)); err != nil {
