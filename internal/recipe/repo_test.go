@@ -224,7 +224,7 @@ func TestStepsAssembledInOrder(t *testing.T) {
 		t.Fatalf("metadata wrong: %+v", rec)
 	}
 	want := []string{"first", "second", "third"}
-	if len(rec.Steps) != 3 || rec.Steps[0] != want[0] || rec.Steps[2] != want[2] {
+	if len(rec.Steps) != 3 || rec.Steps[0] != want[0] || rec.Steps[1] != want[1] || rec.Steps[2] != want[2] {
 		t.Fatalf("steps wrong/out of order: %v", rec.Steps)
 	}
 }
@@ -240,7 +240,7 @@ func TestInPantryDerivation(t *testing.T) {
 		Ingredients: []RecipeIngredient{{IngredientID: "egg", Name: "Egg"}, {IngredientID: "flour", Name: "Flour"}},
 	})
 	insertRecipe(t, database, Recipe{ID: "empty", Name: "Empty"}) // no ingredients
-	addPantry(t, database, "egg", "milk")                          // not flour
+	addPantry(t, database, "egg", "milk")                         // not flour
 
 	list, err := NewRepo(database).List(context.Background())
 	if err != nil {
