@@ -1,0 +1,21 @@
+/scratch
+.env
+
+# dependencies & build output
+node_modules/
+/build/
+dist/
+.turbo/
+
+# local k8s secret rendered from .env
+local-k8s/env-config.yaml
+
+# PROTO STUFF
+**/*_gen.go
+**/*_pb.go
+**/*.pb.go
+**/*.connect.go
+**/*_connectquery.ts
+**/*_pb.ts
+**/*.gen.go
+

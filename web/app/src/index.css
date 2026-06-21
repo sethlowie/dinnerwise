@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+/* Class-based dark mode: the `dark:` variant and our tokens key off a
+   `.dark` class on <html> (toggled by ThemeProvider), not the OS media query
+   directly. This lets users override their system preference. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Semantic design tokens. Define raw values per color scheme here, then map
+   them into Tailwind's color system with `@theme inline` below so utilities
+   like `bg-primary` / `text-foreground` resolve to these variables at runtime
+   and flip automatically when `.dark` is present. */
+:root {
+  color-scheme: light;
+
+  --background: oklch(0.99 0.005 95);
+  --foreground: oklch(0.22 0.02 60);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.22 0.02 60);
+
+  --muted: oklch(0.96 0.008 95);
+  --muted-foreground: oklch(0.52 0.02 65);
+
+  --primary: oklch(0.64 0.16 50);
+  --primary-foreground: oklch(0.99 0.01 95);
+
+  --accent: oklch(0.95 0.03 80);
+  --accent-foreground: oklch(0.28 0.04 60);
+
+  --border: oklch(0.9 0.01 90);
+  --ring: oklch(0.64 0.16 50);
+
+  --radius: 0.625rem;
+}
+
+.dark {
+  color-scheme: dark;
+
+  --background: oklch(0.17 0.01 60);
+  --foreground: oklch(0.95 0.01 90);
+
+  --card: oklch(0.2 0.012 60);
+  --card-foreground: oklch(0.95 0.01 90);
+
+  --muted: oklch(0.24 0.012 60);
+  --muted-foreground: oklch(0.68 0.02 70);
+
+  --primary: oklch(0.72 0.16 55);
+  --primary-foreground: oklch(0.18 0.02 60);
+
+  --accent: oklch(0.28 0.03 60);
+  --accent-foreground: oklch(0.92 0.02 80);
+
+  --border: oklch(0.29 0.012 60);
+  --ring: oklch(0.72 0.16 55);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+
+  --radius-lg: var(--radius);
+}
+
+body {
+  @apply bg-background text-foreground;
+}

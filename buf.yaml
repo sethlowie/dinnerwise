@@ -1,0 +1,13 @@
+version: v2
+modules:
+  - path: .
+    excludes:
+      - cmd
+      - web
+      - packages
+lint:
+  use:
+    - STANDARD
+breaking:
+  use:
+    - FILE

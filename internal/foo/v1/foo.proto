@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package internal.foo.v1;
+
+message Foo {
+  string foo = 1;
+}
+
+message GetFooRequest {
+  string id = 1;
+}
+
+message GetFooResponse {
+  Foo data = 1;
+}
+
+service FooService {
+  rpc GetFoo(GetFooRequest) returns (GetFooResponse);
+}

@@ -1,0 +1,23 @@
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/sethlowie/dinnerwise
+plugins:
+  # Go: protobuf messages + ConnectRPC handlers, emitted next to the .proto
+  - remote: buf.build/protocolbuffers/go
+    out: .
+    opt: paths=source_relative
+  - remote: buf.build/connectrpc/go
+    out: .
+    opt: paths=source_relative
+  # TypeScript: messages + Connect-Query (TanStack) hooks for the web client
+  - remote: buf.build/bufbuild/es:v2.10.0
+    out: web/app/src/gen
+    opt: target=ts
+  - remote: buf.build/connectrpc/query-es:v2.0.1
+    out: web/app/src/gen
+    opt: target=ts
+inputs:
+  - directory: .
