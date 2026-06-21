@@ -2,6 +2,7 @@ import { createRoute, getRouteApi, Link } from "@tanstack/react-router";
 import { useQuery } from "@connectrpc/connect-query";
 import { listRecipes } from "../gen/internal/recipe/v1/recipe-RecipeService_connectquery";
 import { rootRoute } from "./__root";
+import { initials, thumbStyle, tintFor } from "../lib/thumb";
 
 const routeApi = getRouteApi("/recipes");
 
@@ -22,44 +23,50 @@ function Recipes() {
     : data.recipes;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-semibold">Recipes</h1>
-        {ingredient && (
-          <button
-            onClick={() => navigate({ search: {} })}
-            className="rounded-full bg-accent px-2 py-0.5 text-xs text-accent-foreground"
-          >
-            ingredient: {ingredient} ✕
-          </button>
-        )}
+    <div className="space-y-6">
+      <div>
+        <div className="mb-2 font-mono text-xs uppercase tracking-[0.12em] text-muted-foreground">
+          Your kitchen
+        </div>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-semibold tracking-tight">Recipes</h1>
+          {ingredient && (
+            <button
+              onClick={() => navigate({ search: {} })}
+              className="rounded-full border border-primary/40 bg-accent px-3 py-1 text-xs text-accent-foreground"
+            >
+              ingredient: {ingredient} ✕
+            </button>
+          )}
+        </div>
       </div>
-      <ul className="grid gap-4 sm:grid-cols-2">
-        {recipes.map((r) => (
-          <li key={r.id}>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        {recipes.map((r) => {
+          const tint = tintFor(r.id);
+          return (
             <Link
+              key={r.id}
               to="/recipes/$id"
               params={{ id: r.id }}
-              className="block rounded-lg border border-border bg-card p-4 text-card-foreground hover:border-primary"
+              className="flex items-center gap-3.5 rounded-2xl border border-border bg-card/60 p-4 transition-colors hover:border-primary/40"
             >
-              <h2 className="font-medium">{r.name}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                ⏱ {r.totalMinutes} min · serves {r.servings}
-              </p>
-              <div className="mt-3 flex flex-wrap gap-1">
-                {r.ingredients.map((ing) => (
-                  <span
-                    key={ing.ingredientId}
-                    className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
-                  >
-                    {ing.name}
-                  </span>
-                ))}
+              <div
+                className="flex h-12 w-12 flex-none items-center justify-center rounded-xl font-mono text-sm font-semibold"
+                style={thumbStyle(tint)}
+              >
+                {initials(r.name)}
+              </div>
+              <div className="min-w-0">
+                <div className="truncate font-medium">{r.name}</div>
+                <div className="mt-0.5 truncate font-mono text-xs text-muted-foreground">
+                  ⏱ {r.totalMinutes} min · serves {r.servings}
+                </div>
               </div>
             </Link>
-          </li>
-        ))}
-      </ul>
+          );
+        })}
+      </div>
     </div>
   );
 }
