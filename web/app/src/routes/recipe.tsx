@@ -1,10 +1,10 @@
 import { createRoute, getRouteApi, Link } from "@tanstack/react-router";
 import { useQuery } from "@connectrpc/connect-query";
 import { getRecipe } from "../gen/internal/recipe/v1/recipe-RecipeService_connectquery";
-import { rootRoute } from "./__root";
+import { appLayoutRoute } from "./app-layout";
 import { initials, thumbStyle, tintFor } from "../lib/thumb";
 
-const routeApi = getRouteApi("/recipes/$id");
+const routeApi = getRouteApi("/app/recipes/$id");
 
 function RecipeDetail() {
   const { id } = routeApi.useParams();
@@ -87,7 +87,7 @@ function RecipeDetail() {
 }
 
 export const recipeDetailRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appLayoutRoute,
   path: "/recipes/$id",
   component: RecipeDetail,
 });

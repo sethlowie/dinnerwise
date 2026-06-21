@@ -1,10 +1,10 @@
 import { createRoute, getRouteApi, Link } from "@tanstack/react-router";
 import { useQuery } from "@connectrpc/connect-query";
 import { listRecipes } from "../gen/internal/recipe/v1/recipe-RecipeService_connectquery";
-import { rootRoute } from "./__root";
+import { appLayoutRoute } from "./app-layout";
 import { initials, thumbStyle, tintFor } from "../lib/thumb";
 
-const routeApi = getRouteApi("/recipes");
+const routeApi = getRouteApi("/app/recipes");
 
 type RecipeSearch = {
   ingredient?: string;
@@ -106,7 +106,7 @@ function Recipes() {
 }
 
 export const recipesRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appLayoutRoute,
   path: "/recipes",
   validateSearch: (search: Record<string, unknown>): RecipeSearch => {
     const max =

@@ -1,10 +1,10 @@
 import { createRoute, getRouteApi, Link } from "@tanstack/react-router";
 import { useQuery } from "@connectrpc/connect-query";
 import { listMeals } from "../gen/internal/meal/v1/meal-MealService_connectquery";
-import { rootRoute } from "./__root";
+import { appLayoutRoute } from "./app-layout";
 import { initials, thumbStyle, tintFor } from "../lib/thumb";
 
-const routeApi = getRouteApi("/meals");
+const routeApi = getRouteApi("/app/meals");
 
 function Meals() {
   const { sort, fav } = routeApi.useSearch();
@@ -92,7 +92,7 @@ function Meals() {
 }
 
 export const mealsRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appLayoutRoute,
   path: "/meals",
   validateSearch: (
     search: Record<string, unknown>,
