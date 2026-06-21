@@ -1,17 +1,20 @@
 import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
 import { ThemeToggle } from "../theme";
+import { ChatProvider } from "../chat/ChatProvider";
+import { ChatPanel } from "../chat/ChatPanel";
+import { useChat } from "../chat/chatContext";
 
-function RootLayout() {
+function Shell() {
+  const { turns } = useChat();
+  const active = turns.length > 0;
+
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="flex min-h-screen flex-col bg-background text-foreground">
       <header className="border-b border-border">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3">
           <nav className="flex items-center gap-4">
             <span className="font-semibold">dinnerwise</span>
-            <Link
-              to="/"
-              className="text-muted-foreground [&.active]:text-foreground"
-            >
+            <Link to="/" className="text-muted-foreground [&.active]:text-foreground">
               Home
             </Link>
             <Link
@@ -24,10 +27,32 @@ function RootLayout() {
           <ThemeToggle />
         </div>
       </header>
-      <main className="mx-auto max-w-3xl px-4 py-8">
-        <Outlet />
-      </main>
+
+      {active ? (
+        <div className="flex min-h-0 flex-1">
+          <main className="flex-1 overflow-auto px-4 py-8">
+            <div className="mx-auto max-w-3xl">
+              <Outlet />
+            </div>
+          </main>
+          <aside className="flex w-96 flex-col border-l border-border">
+            <ChatPanel />
+          </aside>
+        </div>
+      ) : (
+        <main className="flex flex-1 items-center justify-center px-4">
+          <ChatPanel hero />
+        </main>
+      )}
     </div>
+  );
+}
+
+function RootLayout() {
+  return (
+    <ChatProvider>
+      <Shell />
+    </ChatProvider>
   );
 }
 
