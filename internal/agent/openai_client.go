@@ -19,37 +19,41 @@ func newOpenAIClient(apiKey, model string) llmClient {
 	return &openAIClient{client: c, model: model}
 }
 
-func (o *openAIClient) Respond(ctx context.Context, prev string, toolOutputs []llmToolOutput, userText string) (llmTurn, error) {
+func (o *openAIClient) Respond(ctx context.Context, items []llmItem) (llmTurn, error) {
+	// Stateless: the org enforces Zero Data Retention, so we cannot chain with
+	// previous_response_id. Resend the full conversation each call, with
+	// store=false and the system instructions every time.
 	params := responses.ResponseNewParams{
-		Model: shared.ResponsesModel(o.model),
-		Tools: toolDefs(),
+		Model:        shared.ResponsesModel(o.model),
+		Tools:        toolDefs(),
+		Instructions: openai.String(systemPrompt),
+		Store:        openai.Bool(false),
 		// Reasoning effort low keeps fast models snappy.
 		Reasoning: shared.ReasoningParam{Effort: shared.ReasoningEffortLow},
 	}
 
-	if prev != "" {
-		params.PreviousResponseID = openai.String(prev)
+	var input responses.ResponseInputParam
+	for _, it := range items {
+		switch {
+		case it.ToolCall != nil:
+			input = append(input, responses.ResponseInputItemParamOfFunctionCall(
+				it.ToolCall.Arguments, it.ToolCall.CallID, it.ToolCall.Name))
+		case it.ToolOutput != nil:
+			input = append(input, responses.ResponseInputItemParamOfFunctionCallOutput(
+				it.ToolOutput.CallID, it.ToolOutput.Output))
+		case it.UserText != "":
+			input = append(input, responses.ResponseInputItemParamOfMessage(
+				it.UserText, responses.EasyInputMessageRoleUser))
+		}
 	}
-
-	var items responses.ResponseInputParam
-	if userText != "" {
-		// First turn: set system instructions and add the user message.
-		params.Instructions = openai.String(systemPrompt)
-		items = append(items, responses.ResponseInputItemParamOfMessage(userText, responses.EasyInputMessageRoleUser))
-	}
-	for _, out := range toolOutputs {
-		items = append(items, responses.ResponseInputItemParamOfFunctionCallOutput(out.CallID, out.Output))
-	}
-	if len(items) > 0 {
-		params.Input = responses.ResponseNewParamsInputUnion{OfInputItemList: items}
-	}
+	params.Input = responses.ResponseNewParamsInputUnion{OfInputItemList: input}
 
 	resp, err := o.client.Responses.New(ctx, params)
 	if err != nil {
 		return llmTurn{}, err
 	}
 
-	turn := llmTurn{ResponseID: resp.ID}
+	turn := llmTurn{}
 	for _, item := range resp.Output {
 		if item.Type == "function_call" {
 			fc := item.AsFunctionCall()

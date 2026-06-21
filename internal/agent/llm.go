@@ -35,15 +35,26 @@ type llmToolOutput struct {
 }
 
 type llmTurn struct {
-	Text       string
-	ToolCalls  []llmToolCall
-	ResponseID string
+	Text      string
+	ToolCalls []llmToolCall
+}
+
+// llmItem is one entry in the running conversation. Exactly one field is set: a
+// user message, an assistant tool call to echo back, or a tool call's output.
+// We accumulate these and resend the whole list each round because the org runs
+// the Responses API in stateless mode (Zero Data Retention forbids
+// previous_response_id chaining).
+type llmItem struct {
+	UserText   string
+	ToolCall   *llmToolCall
+	ToolOutput *llmToolOutput
 }
 
 // llmClient is the narrow seam over the OpenAI Responses API. Slice 6b wraps the
-// real implementation with Sigil; tests use a stub.
+// real implementation with Sigil; tests use a stub. The full conversation is
+// passed each call (stateless) — see llmItem.
 type llmClient interface {
-	Respond(ctx context.Context, prev string, toolOutputs []llmToolOutput, userText string) (llmTurn, error)
+	Respond(ctx context.Context, items []llmItem) (llmTurn, error)
 }
 
 type llmAgent struct {
@@ -58,23 +69,16 @@ func newLLMAgent(client llmClient, recipes *recipe.Repo, meals *meal.Repo) *llmA
 }
 
 // Run drives the tool-calling loop, emitting AskEvents as each round completes.
+// The conversation is accumulated in items and resent in full each round
+// (stateless; no previous_response_id).
 func (a *llmAgent) Run(ctx context.Context, userText string, emit func(*agentv1.AskEvent) error) error {
-	prev := ""
-	var outputs []llmToolOutput
-	first := true
+	items := []llmItem{{UserText: userText}}
 
 	for round := 0; round < a.maxRounds; round++ {
-		text := ""
-		if first {
-			text = userText
-		}
-		turn, err := a.client.Respond(ctx, prev, outputs, text)
+		turn, err := a.client.Respond(ctx, items)
 		if err != nil {
 			return err
 		}
-		first = false
-		prev = turn.ResponseID
-		outputs = nil
 
 		// No tool calls -> final answer.
 		if len(turn.ToolCalls) == 0 {
@@ -84,7 +88,9 @@ func (a *llmAgent) Run(ctx context.Context, userText string, emit func(*agentv1.
 			return emit(doneEvent())
 		}
 
-		// Execute each tool call, streaming its events and collecting outputs.
+		// Execute each tool call, streaming its events. Echo the assistant calls
+		// then their outputs into the running conversation for the next round.
+		var outputs []llmItem
 		for _, tc := range turn.ToolCalls {
 			if err := emit(thinkingEvent(thinkingFor(tc))); err != nil {
 				return err
@@ -101,12 +107,15 @@ func (a *llmAgent) Run(ctx context.Context, userText string, emit func(*agentv1.
 					return err
 				}
 			}
-			outputs = append(outputs, llmToolOutput{CallID: tc.CallID, Output: res.Summary})
+			call := tc
+			items = append(items, llmItem{ToolCall: &call})
+			outputs = append(outputs, llmItem{ToolOutput: &llmToolOutput{CallID: tc.CallID, Output: res.Summary}})
 		}
+		items = append(items, outputs...)
 	}
 
 	// Hit the round cap: ask once more for a final summary, best-effort.
-	turn, err := a.client.Respond(ctx, prev, outputs, "")
+	turn, err := a.client.Respond(ctx, items)
 	if err == nil {
 		if err := emitText(turn.Text, emit); err != nil {
 			return err

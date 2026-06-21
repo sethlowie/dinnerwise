@@ -13,7 +13,7 @@ type stubClient struct {
 	i     int
 }
 
-func (s *stubClient) Respond(_ context.Context, _ string, _ []llmToolOutput, _ string) (llmTurn, error) {
+func (s *stubClient) Respond(_ context.Context, _ []llmItem) (llmTurn, error) {
 	t := s.turns[s.i]
 	s.i++
 	return t, nil
@@ -55,7 +55,7 @@ func kinds(evs []*agentv1.AskEvent) []string {
 func TestRunToolThenText(t *testing.T) {
 	recipes, meals := seededRepos(t)
 	client := &stubClient{turns: []llmTurn{
-		{ToolCalls: []llmToolCall{{CallID: "c1", Name: toolSearchRecipes, Arguments: `{"ingredient":"chicken"}`}}, ResponseID: "r1"},
+		{ToolCalls: []llmToolCall{{CallID: "c1", Name: toolSearchRecipes, Arguments: `{"ingredient":"chicken"}`}}},
 		{Text: "Here are chicken recipes."},
 	}}
 	a := &llmAgent{recipes: recipes, meals: meals, client: client, maxRounds: 5}
@@ -80,7 +80,7 @@ func TestRunToolThenText(t *testing.T) {
 func TestRunMaxRoundsCap(t *testing.T) {
 	recipes, meals := seededRepos(t)
 	// Always calls a tool -> would loop forever without the cap.
-	always := llmTurn{ToolCalls: []llmToolCall{{CallID: "c", Name: toolSearchRecipes, Arguments: `{}`}}, ResponseID: "r"}
+	always := llmTurn{ToolCalls: []llmToolCall{{CallID: "c", Name: toolSearchRecipes, Arguments: `{}`}}}
 	client := &stubClient{turns: []llmTurn{always, always, always, always, always, always, always}}
 	a := &llmAgent{recipes: recipes, meals: meals, client: client, maxRounds: 5}
 	got := kinds(collect(t, a, "loop"))
