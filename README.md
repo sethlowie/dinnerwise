@@ -1,7 +1,7 @@
 # Dinnerwise
 
-An agentic "what's for dinner?" copilot. Ask in plain language — *"what can I
-cook tonight?"*, *"something quick with chicken"*, *"what are my favorites?"* —
+An agentic "what's for dinner?" copilot. Ask in plain language — _"what can I
+cook tonight?"_, _"something quick with chicken"_, _"what are my favorites?"_ —
 and Dinnerwise searches your recipes and cook history, drives the UI to the
 right view, and explains what it found. The home screen is a single input that
 **morphs into a docked chat panel** as the agent works.
@@ -20,7 +20,7 @@ Each turn streams typed events to the browser over a server-streaming RPC —
 `thinking`, `tool_call`, `text` deltas, `reference` cards, `navigate`, `done` —
 so you watch the agent reason, call tools, and move the app in real time. The
 conversation is multi-turn: prior turns travel with each request, so follow-ups
-like *"now just the ones with chicken"* resolve against context.
+like _"now just the ones with chicken"_ resolve against context.
 
 ```
 Browser (React + TanStack Router)
@@ -41,8 +41,7 @@ the **same streaming contract**, so the app is fully runnable offline.
   streaming), pure-Go SQLite (`modernc.org/sqlite`), hand-written SQL.
 - **Agent:** `openai-go` v3 Responses API (`gpt-5` family), bounded tool-calling
   loop. Runs **statelessly** — the full conversation is resent each turn rather
-  than chained server-side (required by a Zero-Data-Retention org, and a clean
-  fit for horizontal scaling).
+  than chained via `previous_response_id`, so the server holds no session state.
 - **Frontend:** React 19 + Vite, TanStack Router (typed, route-aware so the
   agent can navigate), Tailwind v4 semantic-token theming (light/dark), the
   View Transitions API for the hero↔dock shell morph.
@@ -76,6 +75,7 @@ the proto messages are the contract between Go and the React client.
 
 1. **Configure** — `cp .env.example .env` and set your key (omit it to run the
    scripted fallback agent, fully offline):
+
    ```sh
    OPENAI_API_KEY=sk-...        # omit for the scripted fallback
    OPENAI_MODEL=gpt-5-nano      # any model your account can access
@@ -86,7 +86,7 @@ the proto messages are the contract between Go and the React client.
 
 3. **Frontend** — `make web` (Vite dev server; open the printed URL).
 
-4. **Ask** — from the home input try *"what can I cook tonight?"* and watch the
+4. **Ask** — from the home input try _"what can I cook tonight?"_ and watch the
    input dock and the agent work.
 
 Other targets: `make gen` (regenerate from protos), `make test` (Go tests),
@@ -112,11 +112,26 @@ Observability is additive: with no OTLP endpoint set, the server runs unchanged.
 - **Plumbing first, smarts behind a stable contract.** The streaming transport,
   tools, and UI were built against a scripted backend, then the real LLM dropped
   in behind the identical `AskEvent` contract — no client changes.
-- **Stateless agent.** No server-side session or response chaining; conversation
-  history rides in the request. Simple to scale, and the only option under a
-  Zero-Data-Retention OpenAI org.
+- **Stateless agent.** No server-side session or `previous_response_id`
+  chaining; each turn resends the full conversation.
+- **Client-held conversation history (for now).** History lives in the browser
+  and rides in each request; the server resends it but never persists it, so a
+  reload starts a fresh conversation. This was a time-box choice for the
+  exercise — persisting conversations server-side is a natural next step (see
+  _With more time_).
 - **The model drives navigation.** Rather than rule-based routing, the agent
   calls a `navigate` tool, so behavior lives in one place and shows up in traces.
 - **Route-driven UI + View Transitions.** The centered hero and the docked app
   are route states; entering/leaving the app is a real view-transition morph
   (the input grows into the chat panel), with within-app navigations kept clean.
+
+## With more time
+
+The headline next step is turning the agent from a one-off into a **reusable,
+observable agent core** — extracting a `Tool` interface + registry so the loop
+depends on tools and a prompt, not on this product's repos. After that: real
+token streaming from OpenAI (today we call the blocking API and *mimic*
+streaming on the wire), then productionization (server-side conversation
+persistence, per-user accounts).
+
+See [`docs/roadmap.md`](docs/roadmap.md) for the full breakdown.
