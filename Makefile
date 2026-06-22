@@ -43,3 +43,11 @@ test: ## Run Go unit tests
 .PHONY: tidy
 tidy: ## Tidy go modules
 	go mod tidy
+
+## ---- observability ----
+.PHONY: obs obs-down
+obs: ## Start the local Grafana otel-lgtm stack via Tilt (Grafana :3000, OTLP :4317/:4318)
+	tilt up
+
+obs-down: ## Tear down the observability stack
+	tilt down

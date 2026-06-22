@@ -114,15 +114,28 @@ func Init(ctx context.Context, cfg config.Config) (*Providers, func(context.Cont
   `providers.Sigil` into `agent.NewService(cfg, providers, recipes, meals)`
   (extend the constructor). Log whether observability is on.
 
-### Local stack + dashboard (`deploy/otel-lgtm/`)
+### Local stack + dashboard (`deploy/otel-lgtm/` + `Tiltfile`)
 
-- `docker-compose.yml` running `grafana/otel-lgtm` (Grafana :3000, OTLP gRPC
-  :4317 / HTTP :4318), with a provisioned **dashboard JSON** mounted into the
-  image's dashboard provisioning path.
-- `make obs` (up) / `make obs-down`. Document the env to run the server against
-  it: `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318`,
-  `OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf`, `OTEL_SERVICE_NAME=dinnerwise`
-  (add these to `.env`).
+> Updated during implementation: docker-compose was replaced with **Tilt + k8s**.
+> The dev cluster is a remote homelab k3s, where compose host bind-mounts resolve
+> on the daemon host (not the laptop) — they don't work and actually crashed
+> Grafana. Tilt deploys to the cluster, provisions the dashboard via a
+> **ConfigMap** (no host paths), and **port-forwards** in-cluster services to
+> localhost so a locally-run server reaches them regardless of where the cluster
+> lives. This also matches the dora Tilt/k8s conventions dinnerwise mirrors.
+
+- `deploy/otel-lgtm/` — k8s manifests (Namespace, Deployment `grafana/otel-lgtm`,
+  Service) + a kustomization whose `configMapGenerator` builds the dashboard +
+  provider ConfigMaps from `dashboard.json` / `provisioning.yaml`. The dashboard
+  + provider are mounted via **subPath** so they add files without hiding
+  otel-lgtm's built-in provisioning.
+- `Tiltfile` — `k8s_yaml(kustomize('deploy/otel-lgtm'))` + `k8s_resource` with
+  port-forwards 3000 (Grafana), 4317/4318 (OTLP). `allow_k8s_contexts('homelab')`.
+- `make obs` → `tilt up`, `make obs-down` → `tilt down`. The Go server still
+  runs locally; env to point it at the forwarded collector (add to `.env`):
+  `OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318` (use 127.0.0.1, not
+  localhost, to avoid the IPv6 `::1` resolution miss),
+  `OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf`, `OTEL_SERVICE_NAME=dinnerwise`.
 - Dashboard panels: tokens in/out (`gen_ai.client.token.usage`), operation
   latency (`gen_ai.client.operation.duration`), calls over time, **approx $/turn
   & cumulative $** (`gen_ai.client.cost.usd`), and a recent-traces/Tempo panel.

@@ -13,6 +13,7 @@ import (
 	"github.com/sethlowie/dinnerwise/internal/db"
 	"github.com/sethlowie/dinnerwise/internal/meal"
 	"github.com/sethlowie/dinnerwise/internal/meal/v1/mealv1connect"
+	"github.com/sethlowie/dinnerwise/internal/observability"
 	"github.com/sethlowie/dinnerwise/internal/recipe"
 	"github.com/sethlowie/dinnerwise/internal/recipe/v1/recipev1connect"
 )
@@ -20,6 +21,17 @@ import (
 func main() {
 	_ = godotenv.Load()
 	cfg := config.Load()
+
+	providers, shutdownObs, err := observability.Init(context.Background(), cfg)
+	if err != nil {
+		log.Fatalf("server: observability init: %v", err)
+	}
+	defer func() { _ = shutdownObs(context.Background()) }()
+	if cfg.HasObservability() {
+		log.Printf("server: observability on, exporting to %s", cfg.OTLPEndpoint)
+	} else {
+		log.Print("server: observability off (no OTEL_EXPORTER_OTLP_ENDPOINT)")
+	}
 
 	addr := os.Getenv("ADDR")
 	if addr == "" {
@@ -65,7 +77,7 @@ func main() {
 		log.Print("server: agent backend = scripted (no OPENAI_API_KEY)")
 	}
 	mux.Handle(agentv1connect.NewAgentServiceHandler(
-		agent.NewService(cfg, recipe.NewRepo(database), meal.NewRepo(database)),
+		agent.NewService(cfg, providers, recipe.NewRepo(database), meal.NewRepo(database)),
 	))
 	mux.Handle(mealv1connect.NewMealServiceHandler(meal.NewService(meal.NewRepo(database))))
 

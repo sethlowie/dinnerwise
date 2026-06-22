@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	agentv1 "github.com/sethlowie/dinnerwise/internal/agent/v1"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
 // stubClient returns a fixed script of turns, ignoring inputs.
@@ -58,7 +60,8 @@ func TestRunToolThenText(t *testing.T) {
 		{ToolCalls: []llmToolCall{{CallID: "c1", Name: toolSearchRecipes, Arguments: `{"ingredient":"chicken"}`}}},
 		{Text: "Here are chicken recipes."},
 	}}
-	a := &llmAgent{recipes: recipes, meals: meals, client: client, maxRounds: 5}
+	a := newLLMAgent(client, recipes, meals, nil)
+	a.maxRounds = 5
 	got := kinds(collect(t, a, "chicken please"))
 	// thinking + tool_call precede the references; text then done at the end.
 	if got[0] != "thinking" || got[1] != "tool_call" {
@@ -77,12 +80,40 @@ func TestRunToolThenText(t *testing.T) {
 	}
 }
 
+func TestRunEmitsSpans(t *testing.T) {
+	recipes, meals := seededRepos(t)
+	client := &stubClient{turns: []llmTurn{
+		{ToolCalls: []llmToolCall{{CallID: "c1", Name: toolSearchRecipes, Arguments: `{"ingredient":"chicken"}`}}},
+		{Text: "done"},
+	}}
+	sr := tracetest.NewSpanRecorder()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+	a := newLLMAgent(client, recipes, meals, tp.Tracer("test"))
+
+	ctx, parent := tp.Tracer("test").Start(context.Background(), "agent.ask")
+	if err := a.Run(ctx, "chicken", func(*agentv1.AskEvent) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	parent.End()
+
+	var sawTool bool
+	for _, s := range sr.Ended() {
+		if s.Name() == "agent.tool" {
+			sawTool = true
+		}
+	}
+	if !sawTool {
+		t.Fatal("expected an agent.tool span")
+	}
+}
+
 func TestRunMaxRoundsCap(t *testing.T) {
 	recipes, meals := seededRepos(t)
 	// Always calls a tool -> would loop forever without the cap.
 	always := llmTurn{ToolCalls: []llmToolCall{{CallID: "c", Name: toolSearchRecipes, Arguments: `{}`}}}
 	client := &stubClient{turns: []llmTurn{always, always, always, always, always, always, always}}
-	a := &llmAgent{recipes: recipes, meals: meals, client: client, maxRounds: 5}
+	a := newLLMAgent(client, recipes, meals, nil)
+	a.maxRounds = 5
 	got := kinds(collect(t, a, "loop"))
 	if got[len(got)-1] != "done" {
 		t.Fatalf("want done last even at cap; got %v", got)

@@ -8,6 +8,9 @@ import (
 	agentv1 "github.com/sethlowie/dinnerwise/internal/agent/v1"
 	"github.com/sethlowie/dinnerwise/internal/meal"
 	"github.com/sethlowie/dinnerwise/internal/recipe"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 const systemPrompt = `You are Sous, a concise kitchen copilot for a home cook.
@@ -62,10 +65,14 @@ type llmAgent struct {
 	meals     *meal.Repo
 	client    llmClient
 	maxRounds int
+	tracer    trace.Tracer
 }
 
-func newLLMAgent(client llmClient, recipes *recipe.Repo, meals *meal.Repo) *llmAgent {
-	return &llmAgent{recipes: recipes, meals: meals, client: client, maxRounds: 5}
+func newLLMAgent(client llmClient, recipes *recipe.Repo, meals *meal.Repo, tracer trace.Tracer) *llmAgent {
+	if tracer == nil {
+		tracer = noop.NewTracerProvider().Tracer("agent")
+	}
+	return &llmAgent{recipes: recipes, meals: meals, client: client, maxRounds: 5, tracer: tracer}
 }
 
 // Run drives the tool-calling loop, emitting AskEvents as each round completes.
@@ -98,7 +105,12 @@ func (a *llmAgent) Run(ctx context.Context, userText string, emit func(*agentv1.
 			if err := emit(toolCallEvent(tc.Name, detailFor(tc))); err != nil {
 				return err
 			}
-			res, err := executeTool(ctx, a.recipes, a.meals, tc.Name, tc.Arguments)
+			res, err := func() (toolResult, error) {
+				ctx, span := a.tracer.Start(ctx, "agent.tool",
+					trace.WithAttributes(attribute.String("gen_ai.tool.name", tc.Name)))
+				defer span.End()
+				return executeTool(ctx, a.recipes, a.meals, tc.Name, tc.Arguments)
+			}()
 			if err != nil {
 				res = toolResult{Summary: fmt.Sprintf(`{"error":%q}`, err.Error())}
 			}

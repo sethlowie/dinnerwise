@@ -3,6 +3,8 @@ package agent
 import (
 	"context"
 
+	"github.com/grafana/sigil-sdk/go/sigil"
+	sigilopenai "github.com/grafana/sigil-sdk/go-providers/openai"
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
 	"github.com/openai/openai-go/v3/responses"
@@ -12,11 +14,12 @@ import (
 type openAIClient struct {
 	client openai.Client
 	model  string
+	sigil  *sigil.Client
 }
 
-func newOpenAIClient(apiKey, model string) llmClient {
+func newOpenAIClient(apiKey, model string, sclient *sigil.Client) llmClient {
 	c := openai.NewClient(option.WithAPIKey(apiKey))
-	return &openAIClient{client: c, model: model}
+	return &openAIClient{client: c, model: model, sigil: sclient}
 }
 
 func (o *openAIClient) Respond(ctx context.Context, items []llmItem) (llmTurn, error) {
@@ -48,10 +51,18 @@ func (o *openAIClient) Respond(ctx context.Context, items []llmItem) (llmTurn, e
 	}
 	params.Input = responses.ResponseNewParamsInputUnion{OfInputItemList: input}
 
-	resp, err := o.client.Responses.New(ctx, params)
+	var resp *responses.Response
+	var err error
+	if o.sigil != nil {
+		resp, err = sigilopenai.ResponsesNew(ctx, o.sigil, o.client, params)
+	} else {
+		resp, err = o.client.Responses.New(ctx, params)
+	}
 	if err != nil {
 		return llmTurn{}, err
 	}
+	// Approximate $ cost from usage (tokens themselves are recorded by Sigil).
+	recordCost(ctx, o.model, resp.Usage.InputTokens, resp.Usage.OutputTokens)
 
 	turn := llmTurn{}
 	for _, item := range resp.Output {
