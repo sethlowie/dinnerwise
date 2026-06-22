@@ -18,7 +18,7 @@ function greeting(): string {
 
 type StepRow = { label: string; active: boolean };
 
-// Map a turn's meta events onto ordered Sous "Working" step rows. The scripted
+// Map a turn's meta events onto ordered "Working" step rows. The scripted
 // backend emits thinking before tool_call before text, so rendering thinking
 // rows then tool-call rows preserves arrival order. The latest row spins while
 // the turn is still working and no reply text has arrived yet.
@@ -139,7 +139,7 @@ export function ChatPanel({ hero = false }: { hero?: boolean }) {
       <div className="flex items-center gap-3 border-b border-border px-5 py-4">
         <div className="orb h-9 w-9 flex-none rounded-full" />
         <div className="min-w-0 flex-1">
-          <div className="font-semibold">Sous</div>
+          <div className="font-semibold">Dinnerwise</div>
           <div className="mt-0.5 flex items-center gap-2">
             <span className={`h-1.5 w-1.5 rounded-full ${st.dot}`} />
             <span className="font-mono text-xs text-muted-foreground">
