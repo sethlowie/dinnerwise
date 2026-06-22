@@ -48,9 +48,10 @@ type llmTurn struct {
 // the Responses API in stateless mode (Zero Data Retention forbids
 // previous_response_id chaining).
 type llmItem struct {
-	UserText   string
-	ToolCall   *llmToolCall
-	ToolOutput *llmToolOutput
+	UserText      string
+	AssistantText string
+	ToolCall      *llmToolCall
+	ToolOutput    *llmToolOutput
 }
 
 // llmClient is the narrow seam over the OpenAI Responses API. Slice 6b wraps the
@@ -76,10 +77,12 @@ func newLLMAgent(client llmClient, recipes *recipe.Repo, meals *meal.Repo, trace
 }
 
 // Run drives the tool-calling loop, emitting AskEvents as each round completes.
-// The conversation is accumulated in items and resent in full each round
-// (stateless; no previous_response_id).
-func (a *llmAgent) Run(ctx context.Context, userText string, emit func(*agentv1.AskEvent) error) error {
-	items := []llmItem{{UserText: userText}}
+// history holds prior conversation turns (oldest first); they are prepended so
+// the model has context. The conversation is accumulated in items and resent in
+// full each round (stateless; no previous_response_id).
+func (a *llmAgent) Run(ctx context.Context, history []llmItem, userText string, emit func(*agentv1.AskEvent) error) error {
+	items := append([]llmItem{}, history...)
+	items = append(items, llmItem{UserText: userText})
 
 	for round := 0; round < a.maxRounds; round++ {
 		turn, err := a.client.Respond(ctx, items)

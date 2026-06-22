@@ -2,8 +2,19 @@ syntax = "proto3";
 
 package internal.agent.v1;
 
+// HistoryTurn is one prior exchange in the conversation: what the user said and
+// the assistant's final spoken reply. Tool calls/results are intentionally not
+// carried — just the gist — to keep the resent context small.
+message HistoryTurn {
+  string user_text = 1;
+  string assistant_text = 2;
+}
+
 message AskRequest {
   string text = 1;
+  // Prior turns, oldest first. The server is stateless, so the client sends the
+  // conversation history each turn.
+  repeated HistoryTurn history = 2;
 }
 
 message TextDelta { string text = 1; }

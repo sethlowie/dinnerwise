@@ -9,13 +9,17 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
-// stubClient returns a fixed script of turns, ignoring inputs.
+// stubClient returns a fixed script of turns, capturing the items of the first call.
 type stubClient struct {
-	turns []llmTurn
-	i     int
+	turns     []llmTurn
+	i         int
+	lastItems []llmItem
 }
 
-func (s *stubClient) Respond(_ context.Context, _ []llmItem) (llmTurn, error) {
+func (s *stubClient) Respond(_ context.Context, items []llmItem) (llmTurn, error) {
+	if s.i == 0 {
+		s.lastItems = items
+	}
 	t := s.turns[s.i]
 	s.i++
 	return t, nil
@@ -24,7 +28,7 @@ func (s *stubClient) Respond(_ context.Context, _ []llmItem) (llmTurn, error) {
 func collect(t *testing.T, a *llmAgent, text string) []*agentv1.AskEvent {
 	t.Helper()
 	var got []*agentv1.AskEvent
-	if err := a.Run(context.Background(), text, func(e *agentv1.AskEvent) error {
+	if err := a.Run(context.Background(), nil, text, func(e *agentv1.AskEvent) error {
 		got = append(got, e)
 		return nil
 	}); err != nil {
@@ -91,7 +95,7 @@ func TestRunEmitsSpans(t *testing.T) {
 	a := newLLMAgent(client, recipes, meals, tp.Tracer("test"))
 
 	ctx, parent := tp.Tracer("test").Start(context.Background(), "agent.ask")
-	if err := a.Run(ctx, "chicken", func(*agentv1.AskEvent) error { return nil }); err != nil {
+	if err := a.Run(ctx, nil, "chicken", func(*agentv1.AskEvent) error { return nil }); err != nil {
 		t.Fatal(err)
 	}
 	parent.End()
@@ -121,5 +125,46 @@ func TestRunMaxRoundsCap(t *testing.T) {
 	// Loop runs at most maxRounds (5) times, plus one final summary call = 6 total.
 	if client.i > 6 {
 		t.Fatalf("client called %d times, want <= 6", client.i)
+	}
+}
+
+func TestRunPrependsHistory(t *testing.T) {
+	recipes, meals := seededRepos(t)
+	client := &stubClient{turns: []llmTurn{{Text: "ok"}}}
+	a := newLLMAgent(client, recipes, meals, nil)
+	history := []llmItem{
+		{UserText: "show me quick recipes"},
+		{AssistantText: "Here are 2 quick recipes."},
+	}
+	if err := a.Run(context.Background(), history, "what about with chicken?", func(*agentv1.AskEvent) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	got := client.lastItems
+	if len(got) != 3 {
+		t.Fatalf("want 3 items (2 history + 1 user), got %d: %+v", len(got), got)
+	}
+	if got[0].UserText != "show me quick recipes" || got[1].AssistantText != "Here are 2 quick recipes." {
+		t.Fatalf("history not prepended in order: %+v", got)
+	}
+	if got[2].UserText != "what about with chicken?" {
+		t.Fatalf("current user message must come last, got %+v", got[2])
+	}
+}
+
+func TestHistoryItemsCapAndSkipEmpty(t *testing.T) {
+	var h []*agentv1.HistoryTurn
+	for i := 0; i < maxHistoryTurns+5; i++ {
+		h = append(h, &agentv1.HistoryTurn{UserText: "u", AssistantText: "a"})
+	}
+	h = append(h, &agentv1.HistoryTurn{UserText: "lonely"}) // empty assistant -> 1 item
+	items := historyItems(h)
+	// Only the last maxHistoryTurns turns are kept. The final kept window is
+	// (maxHistoryTurns-1) full turns (2 items each) + the lonely turn (1 item).
+	want := (maxHistoryTurns-1)*2 + 1
+	if len(items) != want {
+		t.Fatalf("historyItems len = %d, want %d", len(items), want)
+	}
+	if items[len(items)-1].UserText != "lonely" {
+		t.Fatalf("last item should be the lonely user turn, got %+v", items[len(items)-1])
 	}
 }

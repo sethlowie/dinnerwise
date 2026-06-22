@@ -47,6 +47,9 @@ func (o *openAIClient) Respond(ctx context.Context, items []llmItem) (llmTurn, e
 		case it.UserText != "":
 			input = append(input, responses.ResponseInputItemParamOfMessage(
 				it.UserText, responses.EasyInputMessageRoleUser))
+		case it.AssistantText != "":
+			input = append(input, responses.ResponseInputItemParamOfMessage(
+				it.AssistantText, responses.EasyInputMessageRoleAssistant))
 		}
 	}
 	params.Input = responses.ResponseNewParamsInputUnion{OfInputItemList: input}
