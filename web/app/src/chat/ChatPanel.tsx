@@ -62,9 +62,6 @@ export function ChatPanel({ hero = false }: { hero?: boolean }) {
     } as unknown as NavigateOptions;
     void router.navigate(opts);
   }
-  function replay(text: string) {
-    if (!isStreaming) ask(text);
-  }
 
   function submit(text: string) {
     const t = text.trim();
@@ -217,15 +214,6 @@ export function ChatPanel({ hero = false }: { hero?: boolean }) {
                     </button>
                   ))}
                 </div>
-              )}
-
-              {t.assistant.done && (
-                <button
-                  onClick={() => replay(t.userText)}
-                  className="self-start font-mono text-xs text-primary hover:opacity-80"
-                >
-                  ↻ replay this run
-                </button>
               )}
             </div>
           );
