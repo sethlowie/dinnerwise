@@ -23,7 +23,7 @@ func TestLiveOpenAI(t *testing.T) {
 	a := newLLMAgent(newOpenAIClient(key, model, nil), recipes, meals, nil)
 
 	var text, done bool
-	err := a.Run(context.Background(), "What can I cook tonight?", func(e *agentv1.AskEvent) error {
+	err := a.Run(context.Background(), nil, "What can I cook tonight?", func(e *agentv1.AskEvent) error {
 		switch e.Event.(type) {
 		case *agentv1.AskEvent_Text:
 			text = true

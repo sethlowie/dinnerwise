@@ -37,9 +37,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         prev.map((t) => (t.id === id ? { ...t, assistant: fn(t.assistant) } : t)),
       );
 
+    // Prior turns (with a spoken reply) become the conversation history we send;
+    // `turns` here is the pre-append snapshot, so it excludes the new turn.
+    const history = turns
+      .filter((t) => t.assistant.text.trim() !== "")
+      .map((t) => ({ userText: t.userText, assistantText: t.assistant.text }));
+
     void (async () => {
       try {
-        for await (const ev of agentClient.ask({ text })) {
+        for await (const ev of agentClient.ask({ text, history })) {
           const event = ev.event;
           switch (event.case) {
             case "thinking":

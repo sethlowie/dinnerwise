@@ -51,6 +51,28 @@ func NewService(cfg config.Config, providers *observability.Providers, recipes *
 	return &Service{recipes: recipes, meals: meals, tracer: tracer, delay: 60 * time.Millisecond}
 }
 
+// maxHistoryTurns caps how many prior turns we resend, bounding token cost.
+const maxHistoryTurns = 10
+
+// historyItems converts proto conversation history into llmItems (user then
+// assistant per turn), keeping only the most recent maxHistoryTurns and skipping
+// empty entries.
+func historyItems(history []*agentv1.HistoryTurn) []llmItem {
+	if len(history) > maxHistoryTurns {
+		history = history[len(history)-maxHistoryTurns:]
+	}
+	items := make([]llmItem, 0, len(history)*2)
+	for _, h := range history {
+		if h.GetUserText() != "" {
+			items = append(items, llmItem{UserText: h.GetUserText()})
+		}
+		if h.GetAssistantText() != "" {
+			items = append(items, llmItem{AssistantText: h.GetAssistantText()})
+		}
+	}
+	return items
+}
+
 // NewServiceWithDelay returns a handler with an explicit delay (use 0 in tests).
 func NewServiceWithDelay(recipes *recipe.Repo, meals *meal.Repo, d time.Duration) agentv1connect.AgentServiceHandler {
 	return &Service{recipes: recipes, meals: meals, delay: d}
@@ -65,7 +87,7 @@ func (s *Service) Ask(
 		ctx, span := s.tracer.Start(ctx, "agent.ask")
 		defer span.End()
 		emit := func(ev *agentv1.AskEvent) error { return stream.Send(ev) }
-		err := s.agent.Run(ctx, req.Msg.GetText(), emit)
+		err := s.agent.Run(ctx, historyItems(req.Msg.GetHistory()), req.Msg.GetText(), emit)
 		if err != nil {
 			// Best-effort graceful close: a short apology then done.
 			_ = stream.Send(textEvent("Sorry — I hit a problem reaching the model. Try again?"))
