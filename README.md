@@ -74,9 +74,10 @@ the proto messages are the contract between Go and the React client.
 
 **Prerequisites:** Go 1.25+, Node + pnpm, and (optional) an OpenAI API key.
 
-1. **Configure** — create `.env` in the repo root:
+1. **Configure** — `cp .env.example .env` and set your key (omit it to run the
+   scripted fallback agent, fully offline):
    ```sh
-   OPENAI_API_KEY=sk-...        # omit to run the scripted fallback agent
+   OPENAI_API_KEY=sk-...        # omit for the scripted fallback
    OPENAI_MODEL=gpt-5-nano      # any model your account can access
    ```
 
