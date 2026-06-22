@@ -1,6 +1,9 @@
 /scratch
 .env
 
+# AI dev-workflow scratch (specs/plans/ledgers/review artifacts)
+/.superpowers/
+
 # dependencies & build output
 node_modules/
 /build/

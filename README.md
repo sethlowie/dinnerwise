@@ -1,123 +1,121 @@
 # Dinnerwise
 
-An agent that answers the most repetitive question in any household — **what's for
-dinner?** — and keeps re-planning in real time as reality interferes while you shop.
+An agentic "what's for dinner?" copilot. Ask in plain language — *"what can I
+cook tonight?"*, *"something quick with chicken"*, *"what are my favorites?"* —
+and Dinnerwise searches your recipes and cook history, drives the UI to the
+right view, and explains what it found. The home screen is a single input that
+**morphs into a docked chat panel** as the agent works.
 
-It's not a recipe browser. It knows who's eating (and their hard limits + tastes),
-what's already in the pantry, and the week's budget. It plans a week of dinners,
-generates the shopping list, and — the headline — **adapts the whole plan on the fly**
-when the store is out of something, a price spikes, or there's a deal worth grabbing.
+## How it works
 
-See [`DESIGN.md`](./DESIGN.md) for the full product + architecture rationale.
+The agent is a real LLM (OpenAI, Responses API) with the app's own data exposed
+as **tools**:
 
-## What it does
+- `search_recipes(ingredient?, in_pantry?, max_minutes?)`
+- `search_meals(favorites_only?, sort?)`
+- `navigate(to, search)` — the model drives the UI itself (list views with
+  filters, or a specific recipe/meal detail page)
 
-1. **Plans the week** — a budget-aware weekly dinner plan that respects every member's
-   hard limits (allergies, diets, vetoes), optimizes soft preferences, and prefers what's
-   already in the pantry. It explains each pick and shows what it ruled out and *why*.
-2. **Generates a pantry-aware shopping list** — needed minus on-hand, priced.
-3. **Adapts in real time** (Shopping Mode) — flag an out-of-stock item, a price spike, or
-   a deal, and the agent re-plans *holistically* across the week and budget, then explains
-   the trade-off it made (with a confidence and a budget delta).
-
-## Design in one breath
-
-- **Deterministic safety, LLM judgment.** Hard constraints (allergies/vetoes) are enforced
-  in code — the model never gets to violate them. The LLM does the *judgment*: which
-  eligible meals to pick, how to adapt, and why. Each agent step validates the model's
-  output and falls back to a deterministic choice if the model errs.
-- **Tiered models.** A frontier model plans and adapts; a small "nano" model does narrow,
-  schema-constrained ingredient enrichment (cached). Swappable via config.
-- **Self-observable.** Every agent step, tool call, and model call is an OpenTelemetry
-  span carrying model + per-tier token usage, exported to a local Grafana/Tempo stack.
-
-## Architecture
+Each turn streams typed events to the browser over a server-streaming RPC —
+`thinking`, `tool_call`, `text` deltas, `reference` cards, `navigate`, `done` —
+so you watch the agent reason, call tools, and move the app in real time. The
+conversation is multi-turn: prior turns travel with each request, so follow-ups
+like *"now just the ones with chicken"* resolve against context.
 
 ```
-React + Vite (Connect-Query)  ──Connect/HTTP──▶  Go server (ConnectRPC, h2c)
-                                                   ├─ auth (hand-rolled sessions)
-                                                   ├─ planner  ─┐
-                                                   ├─ adapter   ├─ internal/ai ─▶ OpenAI-compatible
-                                                   ├─ tools     ┘                 (Ollama / OpenAI)
-                                                   ├─ MongoDB
-                                                   └─ OpenTelemetry ─▶ LGTM (Grafana/Tempo)
+Browser (React + TanStack Router)
+   │  Connect RPC (unary + server-streaming)
+   ▼
+Go server ── RecipeService / MealService ──▶ SQLite
+   └──────── AgentService ──▶ OpenAI (Responses API; repos as tools)
+                  │
+                  └── OpenTelemetry + Grafana Sigil ──▶ otel-lgtm (traces, metrics, cost)
 ```
 
-- **Backend:** Go + [ConnectRPC](https://connectrpc.com), MongoDB, OpenTelemetry.
-- **Frontend:** React + Vite + Tailwind, `@connectrpc/connect-query` + TanStack Query.
-- **Contracts:** Protobuf via [buf](https://buf.build) → Go handlers + a typed TS client.
-- **AI:** `internal/ai` wraps any OpenAI-compatible endpoint. Defaults to local Ollama
-  (qwen3); point it at OpenAI by changing env.
-- **Dev loop:** [Tilt](https://tilt.dev) deploys everything to a local Kubernetes cluster
-  with fast live-reload.
+If no `OPENAI_API_KEY` is set, the agent falls back to a scripted backend over
+the **same streaming contract**, so the app is fully runnable offline.
 
-## Running it
+## Tech stack
 
-**Prerequisites:** a Kubernetes context (k3s, Docker Desktop, kind, …), `tilt`, `kubectl`,
-Docker, Node 20+/`pnpm`, Go 1.25+, and an LLM endpoint (a reachable [Ollama](https://ollama.com)
-or an OpenAI API key).
+- **Backend:** Go, [ConnectRPC](https://connectrpc.com) (Protobuf, server
+  streaming), pure-Go SQLite (`modernc.org/sqlite`), hand-written SQL.
+- **Agent:** `openai-go` v3 Responses API (`gpt-5` family), bounded tool-calling
+  loop. Runs **statelessly** — the full conversation is resent each turn rather
+  than chained server-side (required by a Zero-Data-Retention org, and a clean
+  fit for horizontal scaling).
+- **Frontend:** React 19 + Vite, TanStack Router (typed, route-aware so the
+  agent can navigate), Tailwind v4 semantic-token theming (light/dark), the
+  View Transitions API for the hero↔dock shell morph.
+- **Observability:** OpenTelemetry GenAI semantic conventions + Grafana's
+  [Sigil](https://grafana.com/docs/grafana-cloud/machine-learning/ai-observability/)
+  AI-Observability SDK, exported to a local `grafana/otel-lgtm` stack. Captures
+  per-turn token usage, latency, an approximate $ cost, and a full agent trace
+  (`agent.ask` → `agent.tool` → `gen_ai` generation).
+- **Codegen:** `buf` generates Go and TypeScript from the `.proto` contracts.
 
-```bash
-cp .env.example .env          # adjust models / endpoint if needed
-tilt up                       # builds + deploys server, mongo, and the LGTM stack
-```
-
-Then:
-
-- App: http://localhost:5173 — sign up, then **Plan my week**, then the **Shopping** tab.
-- Grafana (agent traces): http://localhost:3000 — Explore → Tempo → `service.name = dinnerwise`.
-
-### Model configuration
-
-`internal/ai` talks to any OpenAI-compatible endpoint. Set in `.env`:
-
-```bash
-# Local Ollama (default)
-AI_BASE_URL=http://ollama.ai:11434/v1
-AI_API_KEY=ollama
-AI_MODEL=qwen3:8b          # frontier: planning + adaptation
-AI_NANO_MODEL=qwen3:1.7b   # nano: ingredient enrichment
-
-# …or OpenAI
-# AI_BASE_URL=https://api.openai.com/v1
-# AI_API_KEY=sk-...
-# AI_MODEL=gpt-5
-# AI_NANO_MODEL=gpt-5-nano
-```
-
-A small local model gets the plumbing working but is weak at schema adherence and
-reasoning; a frontier model (GPU-hosted or OpenAI) is the quality path. The architecture
-makes the swap a config change, no code edits.
-
-## Repo layout
+## Project layout
 
 ```
-cmd/dinnerwise/        server entrypoint, middleware, observability bootstrap
-cmd/env-config/        renders .env into a k8s Secret for Tilt
+cmd/server/            # entrypoint: wiring, config, observability bootstrap
 internal/
-  ai/                  provider-agnostic LLM client (tiers, JSON mode, token tracing)
-  auth/                hand-rolled session auth + Mongo repos
-  domain/              data model, repos, embedded fixtures, seeding
-  tools/               deterministic tools (pantry diff, price, substitutes) + enrichment
-  planner/             eligibility/accommodation analysis + LLM weekly selection
-  adapter/             real-time holistic re-planning on shopping events
-  observability/       OpenTelemetry tracing + logging
-  <svc>/v1/            protobuf + generated Connect handlers
-packages/api/          generated TypeScript Connect-Query client
-web/app/               React + Vite frontend
-local-k8s/             Tilt-deployed manifests (server, mongo, lgtm)
+  agent/               # the LLM agent: tool loop, OpenAI adapter, cost, scripted fallback
+  recipe/  meal/        # domain slices: schema.sql, repo (hand-written SQL), seed, service
+  config/  db/  observability/
+  */v1/                # protobuf-defined messages + Connect handlers
+web/app/               # React + Vite client (TanStack Router, chat dock)
+deploy/otel-lgtm/      # k8s manifests for the local Grafana observability stack
+Tiltfile               # `tilt up` deploys otel-lgtm with port-forwards
 ```
 
-## Tests
+Each domain slice owns its schema, repo, seed fixtures, and Connect service —
+the proto messages are the contract between Go and the React client.
 
-```bash
-go test -short ./...          # unit tests (constraint analysis, shopping math, …)
-make gen                      # regenerate Go + TS from protos (needs buf)
+## Running locally
+
+**Prerequisites:** Go 1.25+, Node + pnpm, and (optional) an OpenAI API key.
+
+1. **Configure** — create `.env` in the repo root:
+   ```sh
+   OPENAI_API_KEY=sk-...        # omit to run the scripted fallback agent
+   OPENAI_MODEL=gpt-5-nano      # any model your account can access
+   ```
+
+2. **Backend** — `make run` (serves Connect on `:8080`; seeds a local SQLite DB
+   on first run).
+
+3. **Frontend** — `make web` (Vite dev server; open the printed URL).
+
+4. **Ask** — from the home input try *"what can I cook tonight?"* and watch the
+   input dock and the agent work.
+
+Other targets: `make gen` (regenerate from protos), `make test` (Go tests),
+`make build` (server binary), `make db-shell`.
+
+### Observability (optional)
+
+`make obs` deploys `grafana/otel-lgtm` via Tilt and port-forwards Grafana to
+`localhost:3000` (admin/admin) and OTLP to `localhost:4318`. Add to `.env`:
+
+```sh
+OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+OTEL_SERVICE_NAME=dinnerwise
 ```
 
-The LLM path has an env-gated integration test:
+Run the server and chat a bit, then open Grafana → the **Dinnerwise — AI
+Observability** dashboard for token usage, latency, cost, and traces.
+Observability is additive: with no OTLP endpoint set, the server runs unchanged.
 
-```bash
-kubectl -n ai port-forward svc/ollama 11434:11434 &
-AI_INTEGRATION=1 AI_NANO_MODEL=qwen3:1.7b go test ./internal/ai/ -run Integration -v
-```
+## Notable design decisions
+
+- **Plumbing first, smarts behind a stable contract.** The streaming transport,
+  tools, and UI were built against a scripted backend, then the real LLM dropped
+  in behind the identical `AskEvent` contract — no client changes.
+- **Stateless agent.** No server-side session or response chaining; conversation
+  history rides in the request. Simple to scale, and the only option under a
+  Zero-Data-Retention OpenAI org.
+- **The model drives navigation.** Rather than rule-based routing, the agent
+  calls a `navigate` tool, so behavior lives in one place and shows up in traces.
+- **Route-driven UI + View Transitions.** The centered hero and the docked app
+  are route states; entering/leaving the app is a real view-transition morph
+  (the input grows into the chat panel), with within-app navigations kept clean.
