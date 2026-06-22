@@ -97,7 +97,7 @@
             "uid": "${datasource}"
           },
           "expr": "sum by (gen_ai_token_type) (rate(gen_ai_client_token_usage_sum{service_name=\"dinnerwise\"}[5m]))",
-          "legendFormat": "{{gen_ai_response_model}}",
+          "legendFormat": "{{gen_ai_token_type}}",
           "refId": "A"
         }
       ],
@@ -437,7 +437,7 @@
             "uid": "${datasource}"
           },
           "expr": "sum by (gen_ai_request_model) (rate(gen_ai_client_cost_usd_total{service_name=\"dinnerwise\"}[5m]))",
-          "legendFormat": "{{gen_ai_response_model}}",
+          "legendFormat": "{{gen_ai_request_model}}",
           "refId": "A"
         }
       ],
