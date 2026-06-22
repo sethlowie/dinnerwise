@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter, type NavigateOptions } from "@tanstack/react-router";
 import { useChat } from "./chatContext";
 import type { Turn } from "./chatContext";
@@ -47,6 +47,13 @@ export function ChatPanel({ hero = false }: { hero?: boolean }) {
   const { turns, isStreaming, ask } = useChat();
   const [input, setInput] = useState("");
   const router = useRouter();
+
+  // Keep the thread pinned to the latest content as the reply streams in.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [turns]);
 
   function openRef(ref: { kind: string; id: string }) {
     const opts = {
@@ -142,7 +149,7 @@ export function ChatPanel({ hero = false }: { hero?: boolean }) {
         </div>
       </div>
 
-      <div className="flex-1 space-y-5 overflow-auto p-5">
+      <div ref={scrollRef} className="flex-1 space-y-5 overflow-auto p-5">
         {turns.map((t, ti) => {
           const rows = stepRows(t, isStreaming && ti === turns.length - 1);
           return (
@@ -158,16 +165,16 @@ export function ChatPanel({ hero = false }: { hero?: boolean }) {
                   </div>
                   <div className="flex flex-col gap-2">
                     {rows.map((r, i) => (
-                      <div key={i} className="flex items-center gap-2.5 text-sm">
+                      <div key={i} className="flex items-start gap-2.5 text-sm">
                         {r.active ? (
-                          <span className="spinner h-3 w-3 flex-none rounded-full border-2 border-primary border-t-transparent" />
+                          <span className="spinner mt-1 h-3 w-3 flex-none rounded-full border-2 border-primary border-t-transparent" />
                         ) : (
                           <span className="flex-none text-primary">✓</span>
                         )}
                         <span
-                          className={
+                          className={`min-w-0 break-words ${
                             r.active ? "text-foreground" : "text-muted-foreground"
-                          }
+                          }`}
                         >
                           {r.label}
                         </span>
