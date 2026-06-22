@@ -575,6 +575,16 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 ## Task 6: Local otel-lgtm stack + provisioned dashboard
 
+> **Implementation note (revised):** delivered via **Tilt + k8s** instead of
+> docker-compose. The dev cluster is a remote homelab k3s where compose host
+> bind-mounts don't work (they resolve on the daemon host and crashed Grafana).
+> Final artifacts: `deploy/otel-lgtm/{namespace,deployment,kustomization}.yaml`
+> (+ reused `dashboard.json`/`provisioning.yaml` as ConfigMap sources, mounted
+> via subPath) and a root `Tiltfile` with `allow_k8s_contexts('homelab')` and
+> port-forwards 3000/4317/4318. `make obs`→`tilt up`, `make obs-down`→`tilt down`.
+> Verified live: dashboard provisioned + Grafana datasource proxy returns the
+> cost metric. The original compose-based steps below are kept for record.
+
 **Files:** Create `deploy/otel-lgtm/docker-compose.yml`, `deploy/otel-lgtm/dashboard.json`, `deploy/otel-lgtm/provisioning.yaml`; modify `Makefile`.
 
 - [ ] **Step 1: docker-compose**

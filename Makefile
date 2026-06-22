@@ -46,9 +46,8 @@ tidy: ## Tidy go modules
 
 ## ---- observability ----
 .PHONY: obs obs-down
-obs: ## Start the local Grafana otel-lgtm stack
-	docker compose -f deploy/otel-lgtm/docker-compose.yml up -d
-	@echo "Grafana: http://localhost:3000 (admin/admin). OTLP HTTP: http://localhost:4318"
+obs: ## Start the local Grafana otel-lgtm stack via Tilt (Grafana :3000, OTLP :4317/:4318)
+	tilt up
 
-obs-down: ## Stop the local otel-lgtm stack
-	docker compose -f deploy/otel-lgtm/docker-compose.yml down
+obs-down: ## Tear down the observability stack
+	tilt down
