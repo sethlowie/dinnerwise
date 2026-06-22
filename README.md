@@ -6,6 +6,10 @@ and Dinnerwise searches your recipes and cook history, drives the UI to the
 right view, and explains what it found. The home screen is a single input that
 **morphs into a docked chat panel** as the agent works.
 
+## Demo
+
+https://github.com/user-attachments/assets/a92bd938-e625-4be3-8a8e-af1594bf2e10
+
 ## How it works
 
 The agent is a real LLM (OpenAI, Responses API) with the app's own data exposed
