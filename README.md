@@ -8,7 +8,7 @@ right view, and explains what it found. The home screen is a single input that
 
 ## Demo
 
-https://github.com/user-attachments/assets/a92bd938-e625-4be3-8a8e-af1594bf2e10
+https://github.com/user-attachments/assets/4a5454b4-e097-49a9-b399-2738a9afd184
 
 ## How it works
 
