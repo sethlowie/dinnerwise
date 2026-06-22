@@ -48,9 +48,8 @@ type llmTurn struct {
 
 // llmItem is one entry in the running conversation. Exactly one field is set: a
 // user message, an assistant tool call to echo back, or a tool call's output.
-// We accumulate these and resend the whole list each round because the org runs
-// the Responses API in stateless mode (Zero Data Retention forbids
-// previous_response_id chaining).
+// We accumulate these and resend the whole list each round: the agent is
+// stateless, with no previous_response_id chaining.
 type llmItem struct {
 	UserText      string
 	AssistantText string

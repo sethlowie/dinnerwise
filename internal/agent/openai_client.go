@@ -23,9 +23,9 @@ func newOpenAIClient(apiKey, model string, sclient *sigil.Client) llmClient {
 }
 
 func (o *openAIClient) Respond(ctx context.Context, items []llmItem) (llmTurn, error) {
-	// Stateless: the org enforces Zero Data Retention, so we cannot chain with
-	// previous_response_id. Resend the full conversation each call, with
-	// store=false and the system instructions every time.
+	// Stateless by design: no previous_response_id chaining. Resend the full
+	// conversation each call, with store=false and the system instructions every
+	// time, so the server holds no session state.
 	params := responses.ResponseNewParams{
 		Model:        shared.ResponsesModel(o.model),
 		Tools:        toolDefs(),
