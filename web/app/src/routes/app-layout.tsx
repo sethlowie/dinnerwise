@@ -18,7 +18,7 @@ function AppLayout() {
       </main>
       <aside
         style={{ viewTransitionName: "dock" }}
-        className="flex h-screen w-[360px] flex-none flex-col border-l border-border bg-card/70 backdrop-blur"
+        className="flex h-screen w-[440px] flex-none flex-col border-l border-border bg-card/70 backdrop-blur"
       >
         <ChatPanel />
       </aside>

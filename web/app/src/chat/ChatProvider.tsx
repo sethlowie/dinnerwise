@@ -15,6 +15,24 @@ const emptyAssistant: AssistantMessage = {
   references: [],
 };
 
+// The agent navigates by path string. List views ("/recipes", "/meals") carry
+// search filters; a concrete detail path ("/recipes/<id>", "/meals/<id>") is
+// turned into param navigation so it matches the typed $id routes.
+function toNavigateOptions(
+  to: string,
+  search: Record<string, string>,
+): NavigateOptions {
+  const recipe = /^\/recipes\/(.+)$/.exec(to);
+  if (recipe) {
+    return { to: "/recipes/$id", params: { id: recipe[1] } } as unknown as NavigateOptions;
+  }
+  const meal = /^\/meals\/(.+)$/.exec(to);
+  if (meal) {
+    return { to: "/meals/$id", params: { id: meal[1] } } as unknown as NavigateOptions;
+  }
+  return { to, search } as unknown as NavigateOptions;
+}
+
 export function ChatProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -29,8 +47,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     ]);
     setIsStreaming(true);
 
-    const startedOnHome = window.location.pathname === "/";
-    let navigated = false;
+    // Submitting from home: jump into the app immediately so the chat dock and
+    // the agent's "thinking" are visible right away (the hero input morphs into
+    // the dock) instead of waiting for the agent's first navigate event. The
+    // agent's own navigate event refines the destination as the turn streams.
+    if (window.location.pathname === "/") {
+      void router.navigate({ to: "/recipes" });
+    }
 
     const update = (fn: (a: AssistantMessage) => AssistantMessage) =>
       setTurns((prev) =>
@@ -78,21 +101,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
               }));
               break;
             case "navigate": {
-              const opts = {
-                to: event.value.to,
-                search: event.value.search,
-              } as unknown as NavigateOptions;
-              void router.navigate(opts);
-              navigated = true;
+              void router.navigate(
+                toNavigateOptions(event.value.to, event.value.search),
+              );
               break;
             }
             case "done":
               update((a) => ({ ...a, done: true }));
               break;
           }
-        }
-        if (!navigated && startedOnHome) {
-          void router.navigate({ to: "/recipes" });
         }
       } finally {
         setIsStreaming(false);

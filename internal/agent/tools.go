@@ -151,7 +151,7 @@ func toolDefs() []responses.ToolUnionParam {
 		}},
 		{OfFunction: &responses.FunctionToolParam{
 			Name:        toolNavigate,
-			Description: openai.String("Navigate the UI. to is a path like '/recipes' or '/meals'; search is string key/values like {\"pantry\":\"1\"} or {\"sort\":\"rating\",\"fav\":\"1\"}."),
+			Description: openai.String("Navigate the UI. to is a path: a list view like '/recipes' or '/meals' (use search filters), or a specific item's detail page '/recipes/<recipe_id>' or '/meals/<meal_id>' (use an id from a search result). search is string key/values like {\"pantry\":\"1\"} or {\"sort\":\"rating\",\"fav\":\"1\"} for list views."),
 			Parameters: strObj(map[string]any{
 				"to":     map[string]string{"type": "string"},
 				"search": map[string]any{"type": "object", "additionalProperties": map[string]string{"type": "string"}},
