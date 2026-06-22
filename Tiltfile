@@ -9,8 +9,10 @@
 #   tilt up      # bring the stack up (Grafana :3000, OTLP :4317/:4318)
 #   tilt down    # tear it down
 
-# The dev cluster is a homelab k3s; Tilt guards non-local contexts by default.
-allow_k8s_contexts('homelab')
+# Tilt guards non-local k8s contexts by default. The observability stack is a
+# throwaway dev deployment, so allow whichever context you currently have
+# selected (`kubectl config current-context`).
+allow_k8s_contexts(k8s_context())
 
 k8s_yaml(kustomize('deploy/otel-lgtm'))
 
