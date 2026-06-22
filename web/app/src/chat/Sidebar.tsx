@@ -9,7 +9,7 @@ export function Sidebar() {
     >
       <div className="mb-8 flex items-center gap-3">
         <div className="brand-mark h-7 w-7 rounded-[9px]" />
-        <span className="text-base font-semibold tracking-tight">Sous</span>
+        <span className="text-base font-semibold tracking-tight">Dinnerwise</span>
       </div>
 
       <nav className="flex flex-col gap-1">

@@ -13,7 +13,7 @@ import (
 	"go.opentelemetry.io/otel/trace/noop"
 )
 
-const systemPrompt = `You are Sous, a concise kitchen copilot for a home cook.
+const systemPrompt = `You are Dinnerwise, a concise kitchen copilot for a home cook.
 You have tools to search the user's recipes and cooked-meal log, and to navigate
 the app's UI. Use the tools to look things up — never invent recipes or meals
 that the tools did not return. After finding what the user asked for, call the
